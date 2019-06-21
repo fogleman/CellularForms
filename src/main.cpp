@@ -4,7 +4,10 @@
 #include <iostream>
 
 int main() {
-    const auto points = SpherePoints(1);
-    std::cout << points.size() << std::endl;
+    const auto points = SpherePoints(2);
+    // std::cout << points.size() << std::endl;
+    for (const auto &p : points) {
+        std::cout << glm::to_string(p) << std::endl;
+    }
     return 0;
 }
