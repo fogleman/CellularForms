@@ -24,8 +24,8 @@ private:
     float m_SpringFactor;
     float m_PlanarFactor;
     float m_BulgeFactor;
+    float m_RepulsionFactor;
     float m_RadiusOfInfluence;
-    float m_RepulsionStrength;
 
     // position of each cell
     std::vector<glm::vec3> m_Cells;

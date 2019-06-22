@@ -14,8 +14,8 @@ Model::Model(const std::vector<Triangle> &triangles) {
     m_SpringFactor = 1;
     m_PlanarFactor = 0.1;
     m_BulgeFactor = 0.01;
+    m_RepulsionFactor = 1;
     m_RadiusOfInfluence = 1;
-    m_RepulsionStrength = 1;
 
     // find unique vertices
     std::unordered_map<glm::vec3, int> indexes;
@@ -64,7 +64,10 @@ void Model::Update() {
 
         // get point and normal
         const glm::vec3 &P = m_Cells[i];
+
+        linkedCells.push_back(P);
         const glm::vec3 N = PlaneNormalFromPoints(linkedCells);
+        linkedCells.pop_back();
 
         // accumulate
         glm::vec3 springTarget(0);
@@ -87,10 +90,9 @@ void Model::Update() {
         springTarget *= m;
         planarTarget *= m;
         bulgeDistance *= m;
-        const glm::vec3 bulgeTarget = P + bulgeDistance * N;
 
         // repulsion
-        glm::vec3 collisionOffset(0);
+        glm::vec3 repulsionVector(0);
         const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
         for (int j = 0; j < m_Cells.size(); j++) {
             if (j == i) {
@@ -104,15 +106,16 @@ void Model::Update() {
             const float d2 = glm::length2(D);
             if (d2 < m_RadiusOfInfluence) {
                 const float d = (roi2 - d2) / roi2;
-                collisionOffset += glm::normalize(D) * d;
+                repulsionVector += glm::normalize(D) * d;
             }
         }
 
+        // new position
         cells[i] = P +
             m_SpringFactor * (springTarget - P) +
             m_PlanarFactor * (planarTarget - P) +
-            m_BulgeFactor * (bulgeTarget - P) +
-            m_RepulsionStrength * collisionOffset;
+            (m_BulgeFactor * bulgeDistance) * N +
+            m_RepulsionFactor * repulsionVector;
     }
     m_Cells = cells;
 }
