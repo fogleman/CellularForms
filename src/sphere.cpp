@@ -6,8 +6,8 @@
 #include <unordered_set>
 
 std::vector<Triangle> IcosahedronTriangles() {
-    const double a = 0.8506507174597755;
-    const double b = 0.5257312591858783;
+    const float a = 0.8506507174597755;
+    const float b = 0.5257312591858783;
 
     const auto vertices = std::vector<glm::vec3>{
         {-a, -b,  0}, {-a,  b,  0}, {-b,  0, -a}, {-b,  0,  a},
