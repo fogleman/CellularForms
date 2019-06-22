@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <glm/gtx/normal.hpp>
 
 class Triangle {
 public:
@@ -17,6 +18,10 @@ public:
 
     const glm::vec3 &C() const {
         return m_C;
+    }
+
+    glm::vec3 Normal() const {
+        return glm::triangleNormal(m_A, m_B, m_C);
     }
 
 private:

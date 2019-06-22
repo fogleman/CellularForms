@@ -30,6 +30,9 @@ private:
     // position of each cell
     std::vector<glm::vec3> m_Cells;
 
+    // normal of each cell
+    std::vector<glm::vec3> m_Normals;
+
     // list of indexes of linked cells
     std::vector<std::vector<int>> m_Links;
 };

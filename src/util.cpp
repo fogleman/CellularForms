@@ -3,7 +3,10 @@
 // constructs a plane from a collection of points
 // such that the summed squared distance to all points is minimized
 // https://www.ilikebigbits.com/2015_03_04_plane_from_points.html
-glm::vec3 PlaneNormalFromPoints(const std::vector<glm::vec3> &points) {
+glm::vec3 PlaneNormalFromPoints(
+    const std::vector<glm::vec3> &points,
+    const glm::vec3 &front)
+{
     if (points.size() < 3) {
         return glm::vec3(0);
     }
@@ -37,14 +40,22 @@ glm::vec3 PlaneNormalFromPoints(const std::vector<glm::vec3> &points) {
     }
 
     // choose path with best conditioning
+    glm::vec3 result;
     if (det_max == det_x) {
-        return glm::normalize(glm::vec3(
+        result = glm::normalize(glm::vec3(
             det_x, xz * yz - xy * zz, xy * yz - xz * yy));
     } else if (det_max == det_y) {
-        return glm::normalize(glm::vec3(
+        result = glm::normalize(glm::vec3(
             xz * yz - xy * zz, det_y, xy * xz - yz * xx));
     } else {
-        return glm::normalize(glm::vec3(
+        result = glm::normalize(glm::vec3(
             xy * yz - xz * yy, xy * xz - yz * xx, det_z));
     }
+
+    // flip sign if needed
+    if (glm::dot(result, front) < 0) {
+        result = -result;
+    }
+
+    return result;
 }

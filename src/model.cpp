@@ -19,13 +19,24 @@ Model::Model(const std::vector<Triangle> &triangles) {
 
     // find unique vertices
     std::unordered_map<glm::vec3, int> indexes;
+    std::unordered_map<glm::vec3, glm::vec3> normals;
     for (const auto &t : triangles) {
+        const glm::vec3 normal = t.Normal();
         for (const auto &v : {t.A(), t.B(), t.C()}) {
             if (indexes.find(v) == indexes.end()) {
+                normals[v] = normal;
                 indexes[v] = m_Cells.size();
                 m_Cells.push_back(v);
+            } else {
+                normals[v] += normal;
             }
         }
+    }
+
+    // create normals
+    m_Normals.resize(m_Cells.size());
+    for (const auto &el : indexes) {
+        m_Normals[el.second] = glm::normalize(normals[el.first]);
     }
 
     // create links
@@ -66,8 +77,9 @@ void Model::Update() {
         const glm::vec3 &P = m_Cells[i];
 
         linkedCells.push_back(P);
-        const glm::vec3 N = PlaneNormalFromPoints(linkedCells);
+        const glm::vec3 N = PlaneNormalFromPoints(linkedCells, m_Normals[i]);
         linkedCells.pop_back();
+        m_Normals[i] = N;
 
         // accumulate
         glm::vec3 springTarget(0);
