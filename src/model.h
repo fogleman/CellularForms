@@ -23,7 +23,11 @@ public:
 
     void Update();
 
-    void Split(const int index);
+    void Split(const int i);
+
+    void Link(const int i0, const int i1);
+
+    void Unlink(const int i0, const int i1);
 
 private:
     float m_LinkRestLength;

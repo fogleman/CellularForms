@@ -132,7 +132,84 @@ void Model::Update() {
             m_RepulsionFactor * repulsionVector;
     }
     m_Positions = positions;
+
+    // split one randomly
+    Split(RandomIntN(m_Positions.size()));
 }
 
-void Model::Split(const int index) {
+void Model::Split(const int parentIndex) {
+    // get links (make a copy)
+    const std::vector<int> parentLinks = m_Links[parentIndex];
+
+    // select a linked cell at random
+    const int i0 = parentLinks[RandomIntN(parentLinks.size())];
+    const glm::vec3 &L0 = m_Positions[i0];
+
+    // find another linked cell furthest from the selected one
+    const int i1 = [this, &parentLinks, &L0]() {
+        int furthestIndex = 0;
+        float furthestDistance = 0;
+        for (const int j : parentLinks) {
+            const float d = glm::distance(L0, m_Positions[j]);
+            if (d > furthestDistance) {
+                furthestDistance = d;
+                furthestIndex = j;
+            }
+        }
+        return furthestIndex;
+    }();
+    const glm::vec3 &L1 = m_Positions[i1];
+
+    // compute position and normal
+    const glm::vec3 &P = m_Positions[parentIndex];
+    const glm::vec3 N = glm::normalize(glm::cross(L0 - P, L1 - P));
+    // std::cout << glm::to_string(N) << std::endl;
+
+    // create the child in the same spot as the parent for now
+    const int childIndex = m_Links.size();
+    m_Positions.push_back(m_Positions[parentIndex]);
+    m_Normals.push_back(m_Normals[parentIndex]);
+    m_Links.emplace_back();
+
+    // All the links to one side of the plane of cleavage are left connected to
+    // the parent cell, while the links to the other side are disconnected from
+    // the parent and replaced with links to the daughter cell.
+    for (const int j : parentLinks) {
+        if (j == i0 || j == i1) {
+            continue;
+        }
+        const glm::vec3 &L = m_Positions[j];
+        if (glm::dot(N, L - P) >= 0) {
+            continue;
+        }
+        Unlink(parentIndex, j);
+        Link(childIndex, j);
+    }
+
+    // Along the plane of cleavage links are made to both the parent and
+    // daughter cells. A new link is also created directly between the parent
+    // and daughter.
+    Link(childIndex, parentIndex);
+    Link(childIndex, i0);
+    Link(childIndex, i1);
+
+    // finally, move the parent and child apart a bit
+    m_Positions[parentIndex] += N * m_LinkRestLength * 0.1f;
+    m_Positions[childIndex] -= N * m_LinkRestLength * 0.1f;
+}
+
+void Model::Link(const int i0, const int i1) {
+    m_Links[i0].push_back(i1);
+    m_Links[i1].push_back(i0);
+}
+
+void Model::Unlink(const int i0, const int i1) {
+    auto &links0 = m_Links[i0];
+    auto &links1 = m_Links[i1];
+    const auto f0 = std::find(links0.begin(), links0.end(), i1);
+    const auto f1 = std::find(links1.begin(), links1.end(), i0);
+    std::iter_swap(f0, links0.end() - 1);
+    std::iter_swap(f1, links1.end() - 1);
+    links0.pop_back();
+    links1.pop_back();
 }

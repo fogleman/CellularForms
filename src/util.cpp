@@ -1,5 +1,15 @@
 #include "util.h"
 
+#include <chrono>
+#include <random>
+
+int RandomIntN(const int n) {
+    static thread_local std::mt19937 gen(
+        std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<int> dist(0, n - 1);
+    return dist(gen);
+}
+
 // constructs a plane from a collection of points
 // such that the summed squared distance to all points is minimized
 // https://www.ilikebigbits.com/2015_03_04_plane_from_points.html
