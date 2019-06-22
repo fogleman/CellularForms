@@ -4,6 +4,8 @@
 #include "model.h"
 #include "sphere.h"
 
+// TODO: spatial hash index
+
 int main() {
     const auto triangles = SphereTriangles(1);
     Model model(triangles);

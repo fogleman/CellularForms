@@ -5,10 +5,6 @@
 
 #include "triangle.h"
 
-// list of cells
-// list of neighbors for each cell
-// spatial hash index
-
 class Model {
 public:
     Model(const std::vector<Triangle> &triangles);

@@ -101,9 +101,9 @@ void Model::Update() {
                 continue;
             }
             const glm::vec3 D = P - m_Cells[j];
-            const float distance = glm::length(D);
-            if (distance < m_RadiusOfInfluence) {
-                const float d = (roi2 - distance * distance) / roi2;
+            const float d2 = glm::length2(D);
+            if (d2 < m_RadiusOfInfluence) {
+                const float d = (roi2 - d2) / roi2;
                 collisionOffset += glm::normalize(D) * d;
             }
         }
