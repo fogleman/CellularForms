@@ -1,7 +1,5 @@
 #include "util.h"
 
-#include <iostream>
-
 // constructs a plane from a collection of points
 // such that the summed squared distance to all points is minimized
 // https://www.ilikebigbits.com/2015_03_04_plane_from_points.html
@@ -37,8 +35,6 @@ glm::vec3 PlaneNormalFromPoints(const std::vector<glm::vec3> &points) {
     if (det_max <= 0) {
         return glm::vec3(0);
     }
-
-    // std::cout << det_x << ", " << det_y << ", " << det_z << " = " << det_max << std::endl;
 
     // choose path with best conditioning
     if (det_max == det_x) {

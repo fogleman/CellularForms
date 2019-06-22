@@ -1,6 +1,7 @@
 #include "model.h"
 
 #include <glm/gtx/hash.hpp>
+#include <glm/gtx/norm.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
 #include <unordered_map>
@@ -11,8 +12,8 @@ Model::Model(const std::vector<Triangle> &triangles) {
     // default parameters
     m_LinkRestLength = 1;
     m_SpringFactor = 1;
-    m_PlanarFactor = 1;
-    m_BulgeFactor = 1;
+    m_PlanarFactor = 0.1;
+    m_BulgeFactor = 0.01;
     m_RadiusOfInfluence = 1;
     m_RepulsionStrength = 1;
 
@@ -73,7 +74,6 @@ void Model::Update() {
             springTarget += L + glm::normalize(P - L) * m_LinkRestLength;
             planarTarget += L;
             const glm::vec3 D = L - P;
-            // std::cout << glm::length(D) << std::endl;
             if (m_LinkRestLength > glm::length(D)) {
                 const float dot = glm::dot(D, N);
                 bulgeDistance += std::sqrt(
@@ -89,10 +89,30 @@ void Model::Update() {
         bulgeDistance *= m;
         const glm::vec3 bulgeTarget = P + bulgeDistance * N;
 
+        // repulsion
+        glm::vec3 collisionOffset(0);
+        const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
+        for (int j = 0; j < m_Cells.size(); j++) {
+            if (j == i) {
+                continue;
+            }
+            const auto &links = m_Links[i];
+            if (std::find(links.begin(), links.end(), j) != links.end()) {
+                continue;
+            }
+            const glm::vec3 D = P - m_Cells[j];
+            const float distance = glm::length(D);
+            if (distance < m_RadiusOfInfluence) {
+                const float d = (roi2 - distance * distance) / roi2;
+                collisionOffset += glm::normalize(D) * d;
+            }
+        }
+
         cells[i] = P +
-            0.70f * m_SpringFactor * (springTarget - P) +
-            0.20f * m_PlanarFactor * (planarTarget - P) +
-            0.05f * m_BulgeFactor * (bulgeTarget - P);
+            m_SpringFactor * (springTarget - P) +
+            m_PlanarFactor * (planarTarget - P) +
+            m_BulgeFactor * (bulgeTarget - P) +
+            m_RepulsionStrength * collisionOffset;
     }
     m_Cells = cells;
 }

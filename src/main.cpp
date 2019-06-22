@@ -7,7 +7,7 @@
 int main() {
     const auto triangles = SphereTriangles(1);
     Model model(triangles);
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 100000; i++) {
         // std::cout << glm::to_string(model.Cells()[0]) << std::endl;
         model.Update();
     }
