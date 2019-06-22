@@ -9,8 +9,12 @@ class Model {
 public:
     Model(const std::vector<Triangle> &triangles);
 
-    const std::vector<glm::vec3> &Cells() const {
-        return m_Cells;
+    const std::vector<glm::vec3> &Positions() const {
+        return m_Positions;
+    }
+
+    const std::vector<glm::vec3> &Normals() const {
+        return m_Normals;
     }
 
     const std::vector<std::vector<int>> &Links() const {
@@ -18,6 +22,8 @@ public:
     }
 
     void Update();
+
+    void Split(const int index);
 
 private:
     float m_LinkRestLength;
@@ -28,7 +34,7 @@ private:
     float m_RadiusOfInfluence;
 
     // position of each cell
-    std::vector<glm::vec3> m_Cells;
+    std::vector<glm::vec3> m_Positions;
 
     // normal of each cell
     std::vector<glm::vec3> m_Normals;

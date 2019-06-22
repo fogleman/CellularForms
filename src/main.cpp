@@ -10,12 +10,14 @@ int main() {
     const auto triangles = SphereTriangles(1);
     Model model(triangles);
     for (int i = 0; i < 100000; i++) {
-        // std::cout << glm::to_string(model.Cells()[0]) << std::endl;
         model.Update();
     }
 
-    const auto &cells = model.Cells();
-    for (const auto &p : cells) {
-        std::cout << glm::to_string(p) << std::endl;
+    const auto &positions = model.Positions();
+    const auto &normals = model.Normals();
+    for (int i = 0; i < positions.size(); i++) {
+        const auto p = positions[i];
+        const auto n = normals[i];
+        printf("(%g,%g,%g,%g,%g,%g),\n", p.x, p.y, p.z, n.x, n.y, n.z);
     }
 }

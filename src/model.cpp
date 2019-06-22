@@ -25,8 +25,8 @@ Model::Model(const std::vector<Triangle> &triangles) {
         for (const auto &v : {t.A(), t.B(), t.C()}) {
             if (indexes.find(v) == indexes.end()) {
                 normals[v] = normal;
-                indexes[v] = m_Cells.size();
-                m_Cells.push_back(v);
+                indexes[v] = m_Positions.size();
+                m_Positions.push_back(v);
             } else {
                 normals[v] += normal;
             }
@@ -34,13 +34,13 @@ Model::Model(const std::vector<Triangle> &triangles) {
     }
 
     // create normals
-    m_Normals.resize(m_Cells.size());
+    m_Normals.resize(m_Positions.size());
     for (const auto &el : indexes) {
         m_Normals[el.second] = glm::normalize(normals[el.first]);
     }
 
     // create links
-    m_Links.resize(m_Cells.size());
+    m_Links.resize(m_Positions.size());
     for (const auto &t : triangles) {
         const int a = indexes[t.A()];
         const int b = indexes[t.B()];
@@ -64,18 +64,19 @@ Model::Model(const std::vector<Triangle> &triangles) {
 
 void Model::Update() {
     std::vector<glm::vec3> linkedCells;
-    std::vector<glm::vec3> cells;
-    cells.resize(m_Cells.size());
-    for (int i = 0; i < m_Cells.size(); i++) {
+    std::vector<glm::vec3> positions;
+    positions.resize(m_Positions.size());
+    for (int i = 0; i < m_Positions.size(); i++) {
         // get linked cells
         linkedCells.resize(0);
         for (const int j : m_Links[i]) {
-            linkedCells.push_back(m_Cells[j]);
+            linkedCells.push_back(m_Positions[j]);
         }
 
-        // get point and normal
-        const glm::vec3 &P = m_Cells[i];
+        // get cell position
+        const glm::vec3 &P = m_Positions[i];
 
+        // update normal
         linkedCells.push_back(P);
         const glm::vec3 N = PlaneNormalFromPoints(linkedCells, m_Normals[i]);
         linkedCells.pop_back();
@@ -106,7 +107,7 @@ void Model::Update() {
         // repulsion
         glm::vec3 repulsionVector(0);
         const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
-        for (int j = 0; j < m_Cells.size(); j++) {
+        for (int j = 0; j < m_Positions.size(); j++) {
             if (j == i) {
                 continue;
             }
@@ -114,20 +115,24 @@ void Model::Update() {
             if (std::find(links.begin(), links.end(), j) != links.end()) {
                 continue;
             }
-            const glm::vec3 D = P - m_Cells[j];
+            const glm::vec3 D = P - m_Positions[j];
             const float d2 = glm::length2(D);
-            if (d2 < m_RadiusOfInfluence) {
-                const float d = (roi2 - d2) / roi2;
-                repulsionVector += glm::normalize(D) * d;
+            if (d2 >= roi2) {
+                continue;
             }
+            const float d = (roi2 - d2) / roi2;
+            repulsionVector += glm::normalize(D) * d;
         }
 
         // new position
-        cells[i] = P +
+        positions[i] = P +
             m_SpringFactor * (springTarget - P) +
             m_PlanarFactor * (planarTarget - P) +
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
     }
-    m_Cells = cells;
+    m_Positions = positions;
+}
+
+void Model::Split(const int index) {
 }
