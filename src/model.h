@@ -23,14 +23,16 @@ public:
         return m_Links;
     }
 
-    void RunWorker(
+    void Update();
+
+    void UpdateWithThreadPool(ctpl::thread_pool &tp);
+
+    void UpdateBatch(
         const int wi, const int wn,
         std::vector<glm::vec3> &newPositions,
         std::vector<glm::vec3> &newNormals) const;
 
-    void UpdateWithThreadPool(ctpl::thread_pool &tp);
-
-    void Update();
+    void UpdateFood();
 
     void Split(const int i);
 

@@ -75,7 +75,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
     }
 }
 
-void Model::RunWorker(
+void Model::UpdateBatch(
     const int wi, const int wn,
     std::vector<glm::vec3> &newPositions,
     std::vector<glm::vec3> &newNormals) const
@@ -163,7 +163,7 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     results.resize(wn);
     for (int wi = 0; wi < wn; wi++) {
         results[wi] = tp.push([this, wi, wn, &newPositions, &newNormals](const int i) {
-            RunWorker(wi, wn, newPositions, newNormals);
+            UpdateBatch(wi, wn, newPositions, newNormals);
         });
     }
     for (int wi = 0; wi < wn; wi++) {
@@ -179,99 +179,30 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     m_Positions = newPositions;
     m_Normals = newNormals;
 
-    // split
-    for (int i = 0; i < m_Food.size(); i++) {
-        m_Food[i] += Random(0, 1);
-        if (m_Food[i] > 1000) {
-            Split(i);
-        }
-    }
+    UpdateFood();
 }
 
 void Model::Update() {
     std::vector<glm::vec3> newPositions;
+    std::vector<glm::vec3> newNormals;
     newPositions.resize(m_Positions.size());
+    newNormals.resize(m_Normals.size());
 
-    std::vector<glm::vec3> linkedCells;
-    std::vector<int> nearby;
-
-    for (int i = 0; i < m_Positions.size(); i++) {
-        // get linked cells
-        linkedCells.resize(0);
-        for (const int j : m_Links[i]) {
-            linkedCells.push_back(m_Positions[j]);
-        }
-
-        // get cell position
-        const glm::vec3 P = m_Positions[i];
-
-        // update normal
-        linkedCells.push_back(P);
-        const glm::vec3 N = PlaneNormalFromPoints(linkedCells, m_Normals[i]);
-        linkedCells.pop_back();
-        m_Normals[i] = N;
-
-        // accumulate
-        glm::vec3 springTarget(0);
-        glm::vec3 planarTarget(0);
-        float bulgeDistance = 0;
-        for (const glm::vec3 &L : linkedCells) {
-            springTarget += L + glm::normalize(P - L) * m_LinkRestLength;
-            planarTarget += L;
-            const glm::vec3 D = L - P;
-            if (m_LinkRestLength > glm::length(D)) {
-                const float dot = glm::dot(D, N);
-                bulgeDistance += std::sqrt(
-                    m_LinkRestLength * m_LinkRestLength -
-                    glm::dot(D, D) + dot * dot) + dot;
-            }
-        }
-
-        // average
-        const float m = 1 / static_cast<float>(linkedCells.size());
-        springTarget *= m;
-        planarTarget *= m;
-        bulgeDistance *= m;
-
-        // repulsion
-        glm::vec3 repulsionVector(0);
-        const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
-        nearby.resize(0);
-        m_Index.Search(P, m_RadiusOfInfluence, nearby);
-        const auto &links = m_Links[i];
-        for (const int j : nearby) {
-            if (j == i) {
-                continue;
-            }
-            if (std::find(links.begin(), links.end(), j) != links.end()) {
-                continue;
-            }
-            const glm::vec3 D = P - m_Positions[j];
-            const float d2 = glm::length2(D);
-            if (d2 >= roi2) {
-                continue;
-            }
-            const float d = (roi2 - d2) / roi2;
-            repulsionVector += glm::normalize(D) * d;
-        }
-
-        // new position
-        newPositions[i] = P +
-            m_SpringFactor * (springTarget - P) +
-            m_PlanarFactor * (planarTarget - P) +
-            (m_BulgeFactor * bulgeDistance) * N +
-            m_RepulsionFactor * repulsionVector;
-    }
+    UpdateBatch(0, 1, newPositions, newNormals);
 
     // update index
     for (int i = 0; i < m_Positions.size(); i++) {
         m_Index.Update(m_Positions[i], newPositions[i], i);
     }
 
-    // update positions
+    // update positions and normals
     m_Positions = newPositions;
+    m_Normals = newNormals;
 
-    // add food and split
+    UpdateFood();
+}
+
+void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
         m_Food[i] += Random(0, 1);
         if (m_Food[i] > 1000) {

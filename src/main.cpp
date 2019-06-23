@@ -6,8 +6,6 @@
 #include "sphere.h"
 #include "util.h"
 
-// TODO: spatial hash index
-
 int main() {
     const auto triangles = SphereTriangles(1);
     Model model(triangles);
@@ -19,21 +17,13 @@ int main() {
         fprintf(stderr, "%d: %d\n", i, n);
         // model.Update();
         model.UpdateWithThreadPool(tp);
-        if (n > 5376*4) {
+        if (n > 5376) {
             break;
         }
     }
 
     const auto &positions = model.Positions();
     const auto &links = model.Links();
-    // const auto &normals = model.Normals();
-    // for (int i = 0; i < positions.size(); i++) {
-    //     const auto p = positions[i];
-    //     // const auto n = normals[i];
-    //     // printf("(%g,%g,%g,%g,%g,%g),\n", p.x, p.y, p.z, n.x, n.y, n.z);
-    //     printf("%d,-1,%.3f,%.3f,%.3f\n", i, p.x, p.y, p.z);
-    // }
-
     for (int i = 0; i < positions.size(); i++) {
         for (const int j : links[i]) {
             if (j < i) {
