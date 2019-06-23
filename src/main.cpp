@@ -13,17 +13,13 @@ int main() {
 
     ctpl::thread_pool tp(4);
 
-    // for (int i = 0; i < 3; i++) {
-    //     model.Split(0);    
-    // }
-
     for (int i = 0; ; i++) {
         // break;
         const int n = model.Positions().size();
         fprintf(stderr, "%d: %d\n", i, n);
         // model.Update();
         model.UpdateWithThreadPool(tp);
-        if (n > 100) {
+        if (n > 1344*8*4) {
             break;
         }
     }

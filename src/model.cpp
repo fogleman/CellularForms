@@ -220,32 +220,30 @@ void Model::UpdateFood() {
     }
 }
 
-void Model::Split(const int parentIndex) {
-    // get links (make a copy)
-    const std::vector<int> parentLinks = m_Links[parentIndex];
+bool Model::Linked(const int i, const int j) const {
+    return std::find(
+        m_Links[i].begin(), m_Links[i].end(), j) != m_Links[i].end();
+}
 
-    // select a linked cell at random
-    const int i0 = parentLinks[RandomIntN(parentLinks.size())];
-    const glm::vec3 &L0 = m_Positions[i0];
-
-    // find another linked cell furthest from the selected one
-    const int i1 = [this, &parentLinks, &L0]() {
-        int furthestIndex = 0;
-        float furthestDistance = 0;
-        for (const int j : parentLinks) {
-            const float d = glm::distance(L0, m_Positions[j]);
-            if (d > furthestDistance) {
-                furthestDistance = d;
-                furthestIndex = j;
+std::vector<int> Model::OrderedLinks(const int parentIndex) const {
+    std::vector<int> result = m_Links[parentIndex];
+    for (int i = 1; i < result.size(); i++) {
+        for (int j = i; j < result.size(); j++) {
+            // is result[j] linked to result[i-1] and parent?
+            if (Linked(result[i-1], result[j])) {
+                std::swap(result[i], result[j]);
+                break;
             }
         }
-        return furthestIndex;
-    }();
-    const glm::vec3 &L1 = m_Positions[i1];
+    }
+    const int n = RandomIntN(result.size()-1);
+    std::rotate(result.begin(), result.begin() + n, result.end());
+    return result;
+}
 
-    // compute position and normal
+void Model::Split(const int parentIndex) {
+    // get parent position
     const glm::vec3 P = m_Positions[parentIndex];
-    const glm::vec3 N = glm::normalize(glm::cross(L0 - P, L1 - P));
 
     // create the child in the same spot as the parent for now
     const int childIndex = m_Links.size();
@@ -257,14 +255,10 @@ void Model::Split(const int parentIndex) {
     // All the links to one side of the plane of cleavage are left connected to
     // the parent cell, while the links to the other side are disconnected from
     // the parent and replaced with links to the daughter cell.
-    for (const int j : parentLinks) {
-        if (j == i0 || j == i1) {
-            continue;
-        }
-        const glm::vec3 &L = m_Positions[j];
-        if (glm::dot(N, L - P) >= 0) {
-            continue;
-        }
+    std::vector<int> orderedLinks = OrderedLinks(parentIndex);
+    const int n = orderedLinks.size() / 2;
+    for (int i = 1; i < n; i++) {
+        const int j = orderedLinks[i];
         Unlink(parentIndex, j);
         Link(childIndex, j);
     }
@@ -273,10 +267,10 @@ void Model::Split(const int parentIndex) {
     // daughter cells. A new link is also created directly between the parent
     // and daughter.
     Link(childIndex, parentIndex);
-    Link(childIndex, i0);
-    Link(childIndex, i1);
+    Link(childIndex, orderedLinks[0]);
+    Link(childIndex, orderedLinks[n]);
 
-    // compute direction to move apart
+    // compute new positions for parent and child
     glm::vec3 D0(m_Positions[parentIndex]);
     glm::vec3 D1(m_Positions[childIndex]);
     for (const int j : m_Links[parentIndex]) {
@@ -288,7 +282,6 @@ void Model::Split(const int parentIndex) {
     }
     D1 /= m_Links[childIndex].size() + 1;
 
-    // move the parent and child apart a bit
     m_Positions[parentIndex] = D0;
     m_Positions[childIndex] = D1;
     // m_Positions[parentIndex] += N * m_LinkRestLength * 0.1f;
@@ -329,18 +322,18 @@ std::vector<Triangle> Model::Triangulate() const {
                 if (k <= i) {
                     continue;
                 }
-                if (std::find(m_Links[j].begin(), m_Links[j].end(), k) == m_Links[j].end()) {
+                if (!Linked(j, k)) {
                     continue;
                 }
                 const Triangle t0(m_Positions[i], m_Positions[j], m_Positions[k]);
                 const Triangle t1(m_Positions[k], m_Positions[j], m_Positions[i]);
-                // triangles.push_back(t0);
-                // triangles.push_back(t1);
-                if (glm::dot(m_Normals[i], t0.Normal()) > 0) {
-                    triangles.push_back(t0);
-                } else {
-                    triangles.push_back(t1);
-                }
+                triangles.push_back(t0);
+                triangles.push_back(t1);
+                // if (glm::dot(m_Normals[i], t0.Normal()) > 0) {
+                //     triangles.push_back(t0);
+                // } else {
+                //     triangles.push_back(t1);
+                // }
             }
         }
     }

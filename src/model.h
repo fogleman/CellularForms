@@ -34,6 +34,10 @@ public:
 
     void UpdateFood();
 
+    bool Linked(const int i, const int j) const;
+
+    std::vector<int> OrderedLinks(const int parentIndex) const;
+
     void Split(const int i);
 
     void Link(const int i0, const int i1);
