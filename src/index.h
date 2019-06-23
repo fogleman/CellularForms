@@ -5,11 +5,6 @@
 #include <unordered_map>
 #include <vector>
 
-// XYZ => bucket
-// points within distance (compute *which* neigboring buckets)
-// point IDs
-// update point
-
 class Index {
 public:
     Index(const float cellSize) :

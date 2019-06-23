@@ -40,6 +40,8 @@ public:
 
     void Unlink(const int i0, const int i1);
 
+    std::vector<Triangle> Triangulate() const;
+
 private:
     float m_LinkRestLength;
     float m_SpringFactor;

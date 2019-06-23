@@ -18,7 +18,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_RadiusOfInfluence = 3;
 
     m_SpringFactor = pct * 1;
-    m_PlanarFactor = pct * 0.2;
+    m_PlanarFactor = pct * 0.5;
     m_BulgeFactor = pct * 0.1;
     m_RepulsionFactor = pct * 1;
 
@@ -144,11 +144,20 @@ void Model::UpdateBatch(
         }
 
         // new position
-        newPositions[i] = P +
+        // newPositions[i] = P +
+        const glm::vec3 target = P +
             m_SpringFactor * (springTarget - P) +
             m_PlanarFactor * (planarTarget - P) +
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
+
+        // const glm::vec3 V = target - P;
+        const float maxStep = 0.5;
+        if (glm::distance(target, P) < maxStep) {
+            newPositions[i] = target;
+        } else {
+            newPositions[i] = P + glm::normalize(target - P) * maxStep;
+        }
     }
 }
 
@@ -162,7 +171,7 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     std::vector<std::future<void>> results;
     results.resize(wn);
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([this, wi, wn, &newPositions, &newNormals](const int i) {
+        results[wi] = tp.push([this, wi, wn, &newPositions, &newNormals](int) {
             UpdateBatch(wi, wn, newPositions, newNormals);
         });
     }
@@ -267,9 +276,23 @@ void Model::Split(const int parentIndex) {
     Link(childIndex, i0);
     Link(childIndex, i1);
 
+    // compute direction to move apart
+    glm::vec3 D0(m_Positions[parentIndex]);
+    glm::vec3 D1(m_Positions[childIndex]);
+    for (const int j : m_Links[parentIndex]) {
+        D0 += m_Positions[j];
+    }
+    D0 /= m_Links[parentIndex].size() + 1;
+    for (const int j : m_Links[childIndex]) {
+        D1 += m_Positions[j];
+    }
+    D1 /= m_Links[childIndex].size() + 1;
+
     // move the parent and child apart a bit
-    m_Positions[parentIndex] += N * m_LinkRestLength * 0.01f;
-    m_Positions[childIndex] -= N * m_LinkRestLength * 0.01f;
+    m_Positions[parentIndex] = D0;
+    m_Positions[childIndex] = D1;
+    // m_Positions[parentIndex] += N * m_LinkRestLength * 0.1f;
+    // m_Positions[childIndex] -= N * m_LinkRestLength * 0.1f;
 
     // reset parent's food level
     m_Food[parentIndex] = 0;
@@ -293,4 +316,33 @@ void Model::Unlink(const int i0, const int i1) {
     std::swap(*it1, links1.back());
     links0.pop_back();
     links1.pop_back();
+}
+
+std::vector<Triangle> Model::Triangulate() const {
+    std::vector<Triangle> triangles;
+    for (int i = 0; i < m_Positions.size(); i++) {
+        for (const int j : m_Links[i]) {
+            if (j <= i) {
+                continue;
+            }
+            for (const int k : m_Links[i]) {
+                if (k <= i) {
+                    continue;
+                }
+                if (std::find(m_Links[j].begin(), m_Links[j].end(), k) == m_Links[j].end()) {
+                    continue;
+                }
+                const Triangle t0(m_Positions[i], m_Positions[j], m_Positions[k]);
+                const Triangle t1(m_Positions[k], m_Positions[j], m_Positions[i]);
+                // triangles.push_back(t0);
+                // triangles.push_back(t1);
+                if (glm::dot(m_Normals[i], t0.Normal()) > 0) {
+                    triangles.push_back(t0);
+                } else {
+                    triangles.push_back(t1);
+                }
+            }
+        }
+    }
+    return triangles;
 }
