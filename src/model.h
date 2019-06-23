@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#include "ctpl.h"
+#include "index.h"
 #include "triangle.h"
 
 class Model {
@@ -20,6 +22,13 @@ public:
     const std::vector<std::vector<int>> &Links() const {
         return m_Links;
     }
+
+    void RunWorker(
+        const int wi, const int wn,
+        std::vector<glm::vec3> &newPositions,
+        std::vector<glm::vec3> &newNormals) const;
+
+    void UpdateWithThreadPool(ctpl::thread_pool &tp);
 
     void Update();
 
@@ -43,6 +52,12 @@ private:
     // normal of each cell
     std::vector<glm::vec3> m_Normals;
 
+    // food level of each cell
+    std::vector<float> m_Food;
+
     // list of indexes of linked cells
     std::vector<std::vector<int>> m_Links;
+
+    // spatial hash index
+    Index m_Index;
 };
