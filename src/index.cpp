@@ -55,12 +55,10 @@ void Index::Remove(const glm::vec3 &point, const int id) {
 bool Index::Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id) {
     const auto key0 = KeyForPoint(p0);
     const auto key1 = KeyForPoint(p1);
+
     if (key0 == key1) {
         return false;
     }
-    // Remove(p0, id);
-    // Add(p1, id);
-    // return true;
 
     const auto k00 = key0 - 1;
     const auto k01 = key0 + 1;
