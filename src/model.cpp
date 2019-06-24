@@ -17,10 +17,10 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_LinkRestLength = 1;
     m_RadiusOfInfluence = 3;
 
-    m_SpringFactor = pct * 1;
-    m_PlanarFactor = pct * 0.5;
-    m_BulgeFactor = pct * 0.1;
-    m_RepulsionFactor = pct * 1;
+    m_SpringFactor = pct * 0.5;
+    m_PlanarFactor = pct * 0.8;
+    m_BulgeFactor = pct * 0.3;
+    m_RepulsionFactor = pct * 0.5;
 
     // find unique vertices
     std::unordered_map<glm::vec3, int> indexes;
@@ -59,6 +59,11 @@ Model::Model(const std::vector<Triangle> &triangles) :
         m_Links[b].push_back(c);
         m_Links[c].push_back(a);
         m_Links[c].push_back(b);
+        // const int i = m_Triangles.size();
+        // m_Triangles.emplace_back(a, b, c);
+        // m_CellTriangles[a].push_back(i);
+        // m_CellTriangles[b].push_back(i);
+        // m_CellTriangles[c].push_back(i);
     }
 
     // make links unique
@@ -77,8 +82,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
 
 void Model::UpdateBatch(
     const int wi, const int wn,
-    std::vector<glm::vec3> &newPositions,
-    std::vector<glm::vec3> &newNormals) const
+    std::vector<glm::vec3> &newPositions) const
 {
     std::vector<glm::vec3> linkedCells;
     std::vector<int> nearby;
@@ -92,12 +96,7 @@ void Model::UpdateBatch(
 
         // get cell position
         const glm::vec3 P = m_Positions[i];
-
-        // update normal
-        linkedCells.push_back(P);
-        const glm::vec3 N = PlaneNormalFromPoints(linkedCells, m_Normals[i]);
-        linkedCells.pop_back();
-        newNormals[i] = N;
+        const glm::vec3 N = m_Normals[i];
 
         // accumulate
         glm::vec3 springTarget(0);
@@ -163,16 +162,14 @@ void Model::UpdateBatch(
 
 void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     std::vector<glm::vec3> newPositions;
-    std::vector<glm::vec3> newNormals;
     newPositions.resize(m_Positions.size());
-    newNormals.resize(m_Normals.size());
 
     const int wn = tp.size();
     std::vector<std::future<void>> results;
     results.resize(wn);
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([this, wi, wn, &newPositions, &newNormals](int) {
-            UpdateBatch(wi, wn, newPositions, newNormals);
+        results[wi] = tp.push([this, wi, wn, &newPositions](int) {
+            UpdateBatch(wi, wn, newPositions);
         });
     }
     for (int wi = 0; wi < wn; wi++) {
@@ -186,18 +183,18 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
 
     // update positions and normals
     m_Positions = newPositions;
-    m_Normals = newNormals;
+    for (int i = 0; i < m_Positions.size(); i++) {
+        UpdateNormal(i);
+    }
 
     UpdateFood();
 }
 
 void Model::Update() {
     std::vector<glm::vec3> newPositions;
-    std::vector<glm::vec3> newNormals;
     newPositions.resize(m_Positions.size());
-    newNormals.resize(m_Normals.size());
 
-    UpdateBatch(0, 1, newPositions, newNormals);
+    UpdateBatch(0, 1, newPositions);
 
     // update index
     for (int i = 0; i < m_Positions.size(); i++) {
@@ -206,7 +203,9 @@ void Model::Update() {
 
     // update positions and normals
     m_Positions = newPositions;
-    m_Normals = newNormals;
+    for (int i = 0; i < m_Positions.size(); i++) {
+        UpdateNormal(i);
+    }
 
     UpdateFood();
 }
@@ -225,6 +224,7 @@ bool Model::Linked(const int i, const int j) const {
         m_Links[i].begin(), m_Links[i].end(), j) != m_Links[i].end();
 }
 
+// TODO: only recompute when changed
 std::vector<int> Model::OrderedLinks(const int parentIndex) const {
     std::vector<int> result = m_Links[parentIndex];
     for (int i = 1; i < result.size(); i++) {
@@ -241,6 +241,16 @@ std::vector<int> Model::OrderedLinks(const int parentIndex) const {
     return result;
 }
 
+// TODO: normals from triangles
+void Model::UpdateNormal(const int i) {
+    std::vector<glm::vec3> points;
+    // points.push_back(m_Positions[i]);
+    for (const int j : m_Links[i]) {
+        points.push_back(m_Positions[j]);
+    }
+    m_Normals[i] = PlaneNormalFromPoints(points, m_Normals[i]);
+}
+
 void Model::Split(const int parentIndex) {
     // get parent position
     const glm::vec3 P = m_Positions[parentIndex];
@@ -255,7 +265,7 @@ void Model::Split(const int parentIndex) {
     // All the links to one side of the plane of cleavage are left connected to
     // the parent cell, while the links to the other side are disconnected from
     // the parent and replaced with links to the daughter cell.
-    std::vector<int> orderedLinks = OrderedLinks(parentIndex);
+    const std::vector<int> orderedLinks = OrderedLinks(parentIndex);
     const int n = orderedLinks.size() / 2;
     for (int i = 1; i < n; i++) {
         const int j = orderedLinks[i];
@@ -284,8 +294,13 @@ void Model::Split(const int parentIndex) {
 
     m_Positions[parentIndex] = D0;
     m_Positions[childIndex] = D1;
-    // m_Positions[parentIndex] += N * m_LinkRestLength * 0.1f;
-    // m_Positions[childIndex] -= N * m_LinkRestLength * 0.1f;
+
+    // update normals
+    UpdateNormal(parentIndex);
+    UpdateNormal(childIndex);
+    for (const int j : orderedLinks) {
+        UpdateNormal(j);
+    }
 
     // reset parent's food level
     m_Food[parentIndex] = 0;
@@ -329,7 +344,9 @@ std::vector<Triangle> Model::Triangulate() const {
                 const Triangle t1(m_Positions[k], m_Positions[j], m_Positions[i]);
                 triangles.push_back(t0);
                 triangles.push_back(t1);
-                // if (glm::dot(m_Normals[i], t0.Normal()) > 0) {
+                // const glm::vec3 N = glm::normalize(
+                //     m_Normals[i] + m_Normals[j] + m_Normals[k]);
+                // if (glm::dot(N, t0.Normal()) > 0) {
                 //     triangles.push_back(t0);
                 // } else {
                 //     triangles.push_back(t1);

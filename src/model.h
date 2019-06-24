@@ -29,14 +29,15 @@ public:
 
     void UpdateBatch(
         const int wi, const int wn,
-        std::vector<glm::vec3> &newPositions,
-        std::vector<glm::vec3> &newNormals) const;
+        std::vector<glm::vec3> &newPositions) const;
 
     void UpdateFood();
 
     bool Linked(const int i, const int j) const;
 
     std::vector<int> OrderedLinks(const int parentIndex) const;
+
+    void UpdateNormal(const int i);
 
     void Split(const int i);
 
@@ -65,6 +66,10 @@ private:
 
     // list of indexes of linked cells
     std::vector<std::vector<int>> m_Links;
+
+    // mesh triangles
+    std::vector<glm::ivec3> m_Triangles;
+    std::vector<std::vector<int>> m_CellTriangles;
 
     // spatial hash index
     Index m_Index;
