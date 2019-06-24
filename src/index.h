@@ -16,7 +16,7 @@ public:
 
     void Remove(const glm::vec3 &point, const int id);
 
-    void Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id);
+    bool Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id);
 
     const std::vector<int> &Nearby(const glm::vec3 &point) const;
 

@@ -17,7 +17,7 @@ int main() {
         const int n = model.Positions().size();
         std::cerr << i << ": " << n << std::endl;
         model.UpdateWithThreadPool(tp);
-        if (n > 10752*4) {
+        if (n > 10752*4*4) {
             break;
         }
     }

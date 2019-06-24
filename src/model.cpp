@@ -3,7 +3,6 @@
 #include <glm/gtx/hash.hpp>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/normal.hpp>
-#include <glm/gtx/string_cast.hpp>
 #include <iostream>
 #include <unordered_map>
 
@@ -13,7 +12,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_Index(1)
 {
     // default parameters
-    const float pct = 0.01;
+    const float pct = 0.5;
 
     m_LinkRestLength = 1;
     m_RadiusOfInfluence = 1;
@@ -160,9 +159,11 @@ void Model::Update() {
 
 void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
     // update index
+    int count = 0;
     for (int i = 0; i < m_Positions.size(); i++) {
-        m_Index.Update(m_Positions[i], newPositions[i], i);
+        count += m_Index.Update(m_Positions[i], newPositions[i], i);
     }
+    std::cout << count << std::endl;
 
     // update positions
     m_Positions = newPositions;
@@ -171,7 +172,7 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
         m_Food[i] += Random(0, 1);
-        if (m_Food[i] > 200) {
+        if (m_Food[i] > 50) {
             Split(i);
         }
     }
