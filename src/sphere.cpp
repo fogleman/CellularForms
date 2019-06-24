@@ -1,9 +1,6 @@
 #include "sphere.h"
 
 #include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
-#include <iostream>
-#include <unordered_set>
 
 std::vector<Triangle> IcosahedronTriangles() {
     const float a = 0.8506507174597755;
@@ -64,16 +61,4 @@ std::vector<Triangle> SphereTriangles(const int detail) {
     }
 
     return triangles;
-}
-
-std::vector<glm::vec3> SpherePoints(const int detail) {
-    std::unordered_set<glm::vec3> unique;
-    for (const auto &t : SphereTriangles(detail)) {
-        unique.insert(t.A());
-        unique.insert(t.B());
-        unique.insert(t.C());
-    }
-    std::vector<glm::vec3> result;
-    result.insert(result.end(), unique.begin(), unique.end());
-    return result;
 }

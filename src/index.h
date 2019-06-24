@@ -18,12 +18,10 @@ public:
 
     void Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id);
 
-    void Search(
-        const glm::vec3 &point,
-        const float distance,
-        std::vector<int> &result) const;
+    const std::vector<int> &Nearby(const glm::vec3 &point) const;
 
 private:
     float m_CellSize;
     std::unordered_map<glm::ivec3, std::vector<int>> m_Cells;
+    std::vector<int> m_Empty;
 };

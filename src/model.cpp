@@ -2,6 +2,7 @@
 
 #include <glm/gtx/hash.hpp>
 #include <glm/gtx/norm.hpp>
+#include <glm/gtx/normal.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
 #include <unordered_map>
@@ -9,69 +10,54 @@
 #include "util.h"
 
 Model::Model(const std::vector<Triangle> &triangles) :
-    m_Index(3)
+    m_Index(1)
 {
     // default parameters
     const float pct = 0.01;
 
     m_LinkRestLength = 1;
-    m_RadiusOfInfluence = 3;
+    m_RadiusOfInfluence = 1;
 
     m_SpringFactor = pct * 0.5;
-    m_PlanarFactor = pct * 0.8;
-    m_BulgeFactor = pct * 0.3;
+    m_PlanarFactor = pct * 0.5;
+    m_BulgeFactor = pct * 0.5;
     m_RepulsionFactor = pct * 0.5;
 
     // find unique vertices
     std::unordered_map<glm::vec3, int> indexes;
-    std::unordered_map<glm::vec3, glm::vec3> normals;
-    for (const auto &t : triangles) {
-        const glm::vec3 normal = t.Normal();
+    std::unordered_map<glm::vec3, std::vector<int>> vertexTriangles;
+    for (int i = 0; i < triangles.size(); i++) {
+        const Triangle &t = triangles[i];
         for (const auto &v : {t.A(), t.B(), t.C()}) {
+            vertexTriangles[v].push_back(i);
             if (indexes.find(v) == indexes.end()) {
-                normals[v] = normal;
                 indexes[v] = m_Positions.size();
+                // create new cell
                 m_Positions.push_back(v);
-            } else {
-                normals[v] += normal;
+                m_Food.push_back(0);
+                m_Links.emplace_back();
             }
         }
     }
 
-    // create normals
-    m_Normals.resize(m_Positions.size());
-    for (const auto &el : indexes) {
-        m_Normals[el.second] = glm::normalize(normals[el.first]);
-    }
-
-    // create food
-    m_Food.resize(m_Positions.size());
-
-    // create links
-    m_Links.resize(m_Positions.size());
-    for (const auto &t : triangles) {
-        const int a = indexes[t.A()];
-        const int b = indexes[t.B()];
-        const int c = indexes[t.C()];
-        m_Links[a].push_back(b);
-        m_Links[a].push_back(c);
-        m_Links[b].push_back(a);
-        m_Links[b].push_back(c);
-        m_Links[c].push_back(a);
-        m_Links[c].push_back(b);
-        // const int i = m_Triangles.size();
-        // m_Triangles.emplace_back(a, b, c);
-        // m_CellTriangles[a].push_back(i);
-        // m_CellTriangles[b].push_back(i);
-        // m_CellTriangles[c].push_back(i);
-    }
-
-    // make links unique
-    for (int i = 0; i < m_Links.size(); i++) {
-        auto &links = m_Links[i];
-        std::sort(links.begin(), links.end());
-        links.resize(std::distance(
-            links.begin(), std::unique(links.begin(), links.end())));
+    // sort triangles into CCW order for each vertex and create links
+    for (auto &it : vertexTriangles) {
+        const auto &point = it.first;
+        auto &tris = it.second;
+        for (int i0 = 1; i0 < tris.size(); i0++) {
+            const glm::vec3 &prev = triangles[tris[i0-1]].VertexBefore(point);
+            for (int i1 = i0; i1 < tris.size(); i1++) {
+                if (triangles[tris[i1]].VertexAfter(point) == prev) {
+                    std::swap(tris[i0], tris[i1]);
+                    break;
+                }
+            }
+        }
+        const int i = indexes[point];
+        for (const int j : tris) {
+            const int k = indexes[triangles[j].VertexAfter(point)];
+            m_Links[i].push_back(k);
+        }
     }
 
     // build index
@@ -84,29 +70,24 @@ void Model::UpdateBatch(
     const int wi, const int wn,
     std::vector<glm::vec3> &newPositions) const
 {
-    std::vector<glm::vec3> linkedCells;
-    std::vector<int> nearby;
+    const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
 
     for (int i = wi; i < m_Positions.size(); i += wn) {
-        // get linked cells
-        linkedCells.resize(0);
-        for (const int j : m_Links[i]) {
-            linkedCells.push_back(m_Positions[j]);
-        }
-
-        // get cell position
+        // get cell position, normal, and links
         const glm::vec3 P = m_Positions[i];
-        const glm::vec3 N = m_Normals[i];
+        const glm::vec3 N = CellNormal(i);
+        const auto &links = m_Links[i];
 
         // accumulate
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
-        for (const glm::vec3 &L : linkedCells) {
+        for (const int j : links) {
+            const glm::vec3 &L = m_Positions[j];
             springTarget += L + glm::normalize(P - L) * m_LinkRestLength;
             planarTarget += L;
             const glm::vec3 D = L - P;
-            if (m_LinkRestLength > glm::length(D)) {
+            if (glm::length(D) < m_LinkRestLength) {
                 const float dot = glm::dot(D, N);
                 bulgeDistance += std::sqrt(
                     m_LinkRestLength * m_LinkRestLength -
@@ -115,18 +96,14 @@ void Model::UpdateBatch(
         }
 
         // average
-        const float m = 1 / static_cast<float>(linkedCells.size());
+        const float m = 1 / static_cast<float>(links.size());
         springTarget *= m;
         planarTarget *= m;
         bulgeDistance *= m;
 
         // repulsion
         glm::vec3 repulsionVector(0);
-        const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
-        nearby.resize(0);
-        m_Index.Search(P, m_RadiusOfInfluence, nearby);
-        const auto &links = m_Links[i];
-        for (const int j : nearby) {
+        for (const int j : m_Index.Nearby(P)) {
             if (j == i) {
                 continue;
             }
@@ -138,25 +115,16 @@ void Model::UpdateBatch(
             if (d2 >= roi2) {
                 continue;
             }
-            const float d = (roi2 - d2) / roi2;
-            repulsionVector += glm::normalize(D) * d;
+            const float m = (roi2 - d2) / roi2;
+            repulsionVector += glm::normalize(D) * m;
         }
 
         // new position
-        // newPositions[i] = P +
-        const glm::vec3 target = P +
+        newPositions[i] = P +
             m_SpringFactor * (springTarget - P) +
             m_PlanarFactor * (planarTarget - P) +
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
-
-        // const glm::vec3 V = target - P;
-        const float maxStep = 0.5;
-        if (glm::distance(target, P) < maxStep) {
-            newPositions[i] = target;
-        } else {
-            newPositions[i] = P + glm::normalize(target - P) * maxStep;
-        }
     }
 }
 
@@ -176,17 +144,7 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
         results[wi].get();
     }
 
-    // update index
-    for (int i = 0; i < m_Positions.size(); i++) {
-        m_Index.Update(m_Positions[i], newPositions[i], i);
-    }
-
-    // update positions and normals
-    m_Positions = newPositions;
-    for (int i = 0; i < m_Positions.size(); i++) {
-        UpdateNormal(i);
-    }
-
+    UpdatePositions(std::move(newPositions));
     UpdateFood();
 }
 
@@ -196,59 +154,70 @@ void Model::Update() {
 
     UpdateBatch(0, 1, newPositions);
 
+    UpdatePositions(std::move(newPositions));
+    UpdateFood();
+}
+
+void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
     // update index
     for (int i = 0; i < m_Positions.size(); i++) {
         m_Index.Update(m_Positions[i], newPositions[i], i);
     }
 
-    // update positions and normals
+    // update positions
     m_Positions = newPositions;
-    for (int i = 0; i < m_Positions.size(); i++) {
-        UpdateNormal(i);
-    }
-
-    UpdateFood();
 }
 
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
         m_Food[i] += Random(0, 1);
-        if (m_Food[i] > 1000) {
+        if (m_Food[i] > 200) {
             Split(i);
         }
     }
 }
 
-bool Model::Linked(const int i, const int j) const {
-    return std::find(
-        m_Links[i].begin(), m_Links[i].end(), j) != m_Links[i].end();
+glm::vec3 Model::CellNormal(const int index) const {
+    const auto &links = m_Links[index];
+    const glm::vec3 p0 = m_Positions[index];
+    glm::vec3 p1 = m_Positions[links.back()];
+    glm::vec3 N(0);
+    for (const int i : links) {
+        const glm::vec3 p2 = m_Positions[i];
+        N += glm::triangleNormal(p0, p1, p2);
+        p1 = p2;
+    }
+    return glm::normalize(N);
 }
 
-// TODO: only recompute when changed
-std::vector<int> Model::OrderedLinks(const int parentIndex) const {
-    std::vector<int> result = m_Links[parentIndex];
-    for (int i = 1; i < result.size(); i++) {
-        for (int j = i; j < result.size(); j++) {
-            // is result[j] linked to result[i-1] and parent?
-            if (Linked(result[i-1], result[j])) {
-                std::swap(result[i], result[j]);
-                break;
-            }
-        }
-    }
-    const int n = RandomIntN(result.size()-1);
-    std::rotate(result.begin(), result.begin() + n, result.end());
-    return result;
+void Model::ChangeLink(const int i, const int from, const int to) {
+    auto &links = m_Links[i];
+    auto it = std::find(links.begin(), links.end(), from);
+    // if (it == links.end()) {
+    //     Panic("index not found in ChangeLink");
+    //     return;
+    // }
+    *it = to;
 }
 
-// TODO: normals from triangles
-void Model::UpdateNormal(const int i) {
-    std::vector<glm::vec3> points;
-    // points.push_back(m_Positions[i]);
-    for (const int j : m_Links[i]) {
-        points.push_back(m_Positions[j]);
-    }
-    m_Normals[i] = PlaneNormalFromPoints(points, m_Normals[i]);
+void Model::InsertLinkBefore(const int i, const int before, const int link) {
+    auto &links = m_Links[i];
+    auto it = std::find(links.begin(), links.end(), before);
+    // if (it == links.end()) {
+    //     Panic("index not found in InsertLinkAfter");
+    //     return;
+    // }
+    links.insert(it, link);
+}
+
+void Model::InsertLinkAfter(const int i, const int after, const int link) {
+    auto &links = m_Links[i];
+    auto it = std::find(links.begin(), links.end(), after);
+    // if (it == links.end()) {
+    //     Panic("index not found in InsertLinkAfter");
+    //     return;
+    // }
+    links.insert(it + 1, link);
 }
 
 void Model::Split(const int parentIndex) {
@@ -257,100 +226,75 @@ void Model::Split(const int parentIndex) {
 
     // create the child in the same spot as the parent for now
     const int childIndex = m_Links.size();
-    m_Positions.push_back(m_Positions[parentIndex]);
-    m_Normals.push_back(m_Normals[parentIndex]);
+    m_Positions.push_back(P);
     m_Food.push_back(0);
     m_Links.emplace_back();
 
-    // All the links to one side of the plane of cleavage are left connected to
-    // the parent cell, while the links to the other side are disconnected from
-    // the parent and replaced with links to the daughter cell.
-    const std::vector<int> orderedLinks = OrderedLinks(parentIndex);
-    const int n = orderedLinks.size() / 2;
-    for (int i = 1; i < n; i++) {
-        const int j = orderedLinks[i];
-        Unlink(parentIndex, j);
-        Link(childIndex, j);
+    // choose "plane of cleavage"
+    const auto links = m_Links[parentIndex];
+    const int n = links.size();
+    const int i0 = RandomIntN(n);
+    const int i1 = i0 + n / 2;
+
+    // update parent links
+    auto &parentLinks = m_Links[parentIndex];
+    parentLinks.resize(0);
+    for (int i = i0; i <= i1; i++) {
+        parentLinks.push_back(links[i % n]);
+    }
+    parentLinks.push_back(childIndex);
+
+    // update child links
+    auto &childLinks = m_Links[childIndex];
+    for (int i = i1; i <= i0 + n; i++) {
+        childLinks.push_back(links[i % n]);
+    }
+    childLinks.push_back(parentIndex);
+
+    // update neighbor links
+    InsertLinkAfter(links[i0 % n], parentIndex, childIndex);
+    InsertLinkBefore(links[i1 % n], parentIndex, childIndex);
+    for (int i = i1 + 1; i <= i0 + n - 1; i++) {
+        ChangeLink(links[i % n], parentIndex, childIndex);
     }
 
-    // Along the plane of cleavage links are made to both the parent and
-    // daughter cells. A new link is also created directly between the parent
-    // and daughter.
-    Link(childIndex, parentIndex);
-    Link(childIndex, orderedLinks[0]);
-    Link(childIndex, orderedLinks[n]);
-
-    // compute new positions for parent and child
-    glm::vec3 D0(m_Positions[parentIndex]);
-    glm::vec3 D1(m_Positions[childIndex]);
-    for (const int j : m_Links[parentIndex]) {
-        D0 += m_Positions[j];
+    // compute new parent position
+    glm::vec3 newParentPosition(m_Positions[parentIndex]);
+    for (const int j : parentLinks) {
+        newParentPosition += m_Positions[j];
     }
-    D0 /= m_Links[parentIndex].size() + 1;
-    for (const int j : m_Links[childIndex]) {
-        D1 += m_Positions[j];
-    }
-    D1 /= m_Links[childIndex].size() + 1;
+    newParentPosition /= parentLinks.size() + 1;
 
-    m_Positions[parentIndex] = D0;
-    m_Positions[childIndex] = D1;
-
-    // update normals
-    UpdateNormal(parentIndex);
-    UpdateNormal(childIndex);
-    for (const int j : orderedLinks) {
-        UpdateNormal(j);
+    // compute new child position
+    glm::vec3 newChildPosition(m_Positions[childIndex]);
+    for (const int j : childLinks) {
+        newChildPosition += m_Positions[j];
     }
+    newChildPosition /= childLinks.size() + 1;
+
+    // update positions and index
+    m_Positions[parentIndex] = newParentPosition;
+    m_Positions[childIndex] = newChildPosition;
+    m_Index.Update(P, m_Positions[parentIndex], parentIndex);
+    m_Index.Add(m_Positions[childIndex], childIndex);
 
     // reset parent's food level
     m_Food[parentIndex] = 0;
-
-    // update index
-    m_Index.Update(P, m_Positions[parentIndex], parentIndex);
-    m_Index.Add(m_Positions[childIndex], childIndex);
-}
-
-void Model::Link(const int i0, const int i1) {
-    m_Links[i0].push_back(i1);
-    m_Links[i1].push_back(i0);
-}
-
-void Model::Unlink(const int i0, const int i1) {
-    auto &links0 = m_Links[i0];
-    auto &links1 = m_Links[i1];
-    const auto it0 = std::find(links0.begin(), links0.end(), i1);
-    const auto it1 = std::find(links1.begin(), links1.end(), i0);
-    std::swap(*it0, links0.back());
-    std::swap(*it1, links1.back());
-    links0.pop_back();
-    links1.pop_back();
 }
 
 std::vector<Triangle> Model::Triangulate() const {
     std::vector<Triangle> triangles;
     for (int i = 0; i < m_Positions.size(); i++) {
-        for (const int j : m_Links[i]) {
-            if (j <= i) {
-                continue;
-            }
-            for (const int k : m_Links[i]) {
-                if (k <= i) {
-                    continue;
-                }
-                if (!Linked(j, k)) {
-                    continue;
-                }
-                const Triangle t0(m_Positions[i], m_Positions[j], m_Positions[k]);
-                const Triangle t1(m_Positions[k], m_Positions[j], m_Positions[i]);
-                triangles.push_back(t0);
-                triangles.push_back(t1);
-                // const glm::vec3 N = glm::normalize(
-                //     m_Normals[i] + m_Normals[j] + m_Normals[k]);
-                // if (glm::dot(N, t0.Normal()) > 0) {
-                //     triangles.push_back(t0);
-                // } else {
-                //     triangles.push_back(t1);
-                // }
+        const auto &links = m_Links[i];
+        for (int j = 0; j < links.size(); j++) {
+            const int k = (j + 1) % links.size();
+            const int link0 = links[j];
+            const int link1 = links[k];
+            if (i < link0 && i < link1) {
+                const glm::vec3 &p0 = m_Positions[i];
+                const glm::vec3 &p1 = m_Positions[link0];
+                const glm::vec3 &p2 = m_Positions[link1];
+                triangles.emplace_back(p0, p1, p2);
             }
         }
     }

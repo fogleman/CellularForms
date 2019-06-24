@@ -15,10 +15,6 @@ public:
         return m_Positions;
     }
 
-    const std::vector<glm::vec3> &Normals() const {
-        return m_Normals;
-    }
-
     const std::vector<std::vector<int>> &Links() const {
         return m_Links;
     }
@@ -31,19 +27,19 @@ public:
         const int wi, const int wn,
         std::vector<glm::vec3> &newPositions) const;
 
+    void UpdatePositions(const std::vector<glm::vec3> &&newPositions);
+
     void UpdateFood();
 
-    bool Linked(const int i, const int j) const;
+    glm::vec3 CellNormal(const int index) const;
 
-    std::vector<int> OrderedLinks(const int parentIndex) const;
+    void ChangeLink(const int i, const int from, const int to);
 
-    void UpdateNormal(const int i);
+    void InsertLinkBefore(const int i, const int before, const int link);
+
+    void InsertLinkAfter(const int i, const int after, const int link);
 
     void Split(const int i);
-
-    void Link(const int i0, const int i1);
-
-    void Unlink(const int i0, const int i1);
 
     std::vector<Triangle> Triangulate() const;
 
@@ -58,18 +54,11 @@ private:
     // position of each cell
     std::vector<glm::vec3> m_Positions;
 
-    // normal of each cell
-    std::vector<glm::vec3> m_Normals;
-
     // food level of each cell
     std::vector<float> m_Food;
 
     // list of indexes of linked cells
     std::vector<std::vector<int>> m_Links;
-
-    // mesh triangles
-    std::vector<glm::ivec3> m_Triangles;
-    std::vector<std::vector<int>> m_CellTriangles;
 
     // spatial hash index
     Index m_Index;

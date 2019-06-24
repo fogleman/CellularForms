@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <glm/gtx/normal.hpp>
+#include <vector>
 
 class Triangle {
 public:
@@ -20,9 +20,11 @@ public:
         return m_C;
     }
 
-    glm::vec3 Normal() const {
-        return glm::triangleNormal(m_A, m_B, m_C);
-    }
+    glm::vec3 Normal() const;
+
+    const glm::vec3 &VertexAfter(const glm::vec3 &point) const;
+
+    const glm::vec3 &VertexBefore(const glm::vec3 &point) const;
 
 private:
     glm::vec3 m_A;
