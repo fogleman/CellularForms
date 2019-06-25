@@ -9,7 +9,7 @@
 #include "util.h"
 
 Model::Model(const std::vector<Triangle> &triangles) :
-    m_Index(1)
+    m_Index(2)
 {
     // default parameters
     const float pct = 0.5;
@@ -70,6 +70,7 @@ void Model::UpdateBatch(
     std::vector<glm::vec3> &newPositions) const
 {
     const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
+    const float link2 = m_LinkRestLength * m_LinkRestLength;
 
     for (int i = wi; i < m_Positions.size(); i += wn) {
         // get cell position, normal, and links
@@ -78,19 +79,28 @@ void Model::UpdateBatch(
         const auto &links = m_Links[i];
 
         // accumulate
+        glm::vec3 repulsionVector(0);
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
         for (const int j : links) {
             const glm::vec3 &L = m_Positions[j];
-            springTarget += L + glm::normalize(P - L) * m_LinkRestLength;
-            planarTarget += L;
             const glm::vec3 D = L - P;
-            if (glm::length(D) < m_LinkRestLength) {
+            const glm::vec3 Dn = glm::normalize(D);
+            springTarget += L - Dn * m_LinkRestLength;
+            planarTarget += L;
+            const float length2 = glm::length2(D);
+            if (length2 < link2) {
                 const float dot = glm::dot(D, N);
                 bulgeDistance += std::sqrt(
-                    m_LinkRestLength * m_LinkRestLength -
-                    glm::dot(D, D) + dot * dot) + dot;
+                    link2 - glm::dot(D, D) + dot * dot) + dot;
+            }
+            if (length2 < roi2) {
+                // linked cells will be repulsed in the repulsion step below
+                // so, here we add in the opposite to counteract it for
+                // performance reasons
+                const float m = (roi2 - length2) / roi2;
+                repulsionVector += Dn * m;
             }
         }
 
@@ -101,21 +111,16 @@ void Model::UpdateBatch(
         bulgeDistance *= m;
 
         // repulsion
-        glm::vec3 repulsionVector(0);
         for (const int j : m_Index.Nearby(P)) {
             if (j == i) {
                 continue;
             }
-            if (std::find(links.begin(), links.end(), j) != links.end()) {
-                continue;
-            }
             const glm::vec3 D = P - m_Positions[j];
             const float d2 = glm::length2(D);
-            if (d2 >= roi2) {
-                continue;
+            if (d2 < roi2) {
+                const float m = (roi2 - d2) / roi2;
+                repulsionVector += glm::normalize(D) * m;
             }
-            const float m = (roi2 - d2) / roi2;
-            repulsionVector += glm::normalize(D) * m;
         }
 
         // new position
@@ -163,7 +168,7 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
     for (int i = 0; i < m_Positions.size(); i++) {
         count += m_Index.Update(m_Positions[i], newPositions[i], i);
     }
-    std::cout << count << std::endl;
+    // std::cout << count << std::endl;
 
     // update positions
     m_Positions = newPositions;
@@ -172,7 +177,7 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
         m_Food[i] += Random(0, 1);
-        if (m_Food[i] > 50) {
+        if (m_Food[i] > 500) {
             Split(i);
         }
     }
