@@ -45,6 +45,8 @@ public:
 
     void TriangleIndexes(std::vector<glm::uvec3> &result) const;
 
+    void PositionsAndNormals(std::vector<glm::vec3> &result) const;
+
 private:
     float m_LinkRestLength;
     float m_SpringFactor;

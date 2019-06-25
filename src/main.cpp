@@ -21,12 +21,15 @@ std::string vertexSource = R"(
 uniform mat4 matrix;
 
 attribute vec4 position;
+attribute vec3 normal;
 
 varying vec3 ec_pos;
+varying vec3 ec_normal;
 
 void main() {
     gl_Position = matrix * position;
     ec_pos = vec3(gl_Position);
+    ec_normal = normal;
 }
 )";
 
@@ -34,19 +37,18 @@ std::string fragmentSource = R"(
 #version 120
 
 varying vec3 ec_pos;
+varying vec3 ec_normal;
 
 const vec3 light_direction0 = normalize(vec3(0.5, -2, 1));
 const vec3 light_direction1 = normalize(vec3(-0.5, -1, 1));
-// const vec3 object_color = vec3(0x30 / 255.0, 0x73 / 255.0, 0x47 / 255.0);
 const vec3 color0 = vec3(0.0, 0.15, 0.11);
 const vec3 color1 = vec3(0.59, 0.93, 0.54);
-// const vec3 color0 = vec3(0.12, 0.12, 0.13);
-// const vec3 color1 = vec3(0.86, 0.21, 0.13);
 
 void main() {
-    vec3 ec_normal = normalize(cross(dFdx(ec_pos), dFdy(ec_pos)));
-    float diffuse0 = max(0, dot(ec_normal, light_direction0));
-    float diffuse1 = max(0, dot(ec_normal, light_direction1));
+    vec3 normal = ec_normal;
+    normal = normalize(cross(dFdx(ec_pos), dFdy(ec_pos)));
+    float diffuse0 = max(0, dot(normal, light_direction0));
+    float diffuse1 = max(0, dot(normal, light_direction1));
     float diffuse = diffuse0 * 0.75 + diffuse1 * 0.25;
     // vec3 color = object_color * diffuse;
     vec3 color = mix(color0, color1, diffuse);
@@ -61,6 +63,12 @@ int main() {
     const auto sphereTriangles = SphereTriangles(1);
     Model model(sphereTriangles);
     ctpl::thread_pool tp(4);
+
+    // while (model.Positions().size() < 50000) {
+    //     model.UpdateWithThreadPool(tp);
+    // }
+    // elapsed = std::chrono::steady_clock::now() - startTime;
+    // std::cout << elapsed.count() << std::endl;
 
     if (!glfwInit()) {
         return -1;
@@ -85,6 +93,7 @@ int main() {
     Program p(vertexSource, fragmentSource);
 
     const auto positionAttrib = p.GetAttribLocation("position");
+    const auto normalAttrib = p.GetAttribLocation("normal");
     const auto matrixUniform = p.GetUniformLocation("matrix");
 
     const glm::vec3 minPosition(-40);
@@ -102,10 +111,12 @@ int main() {
     glGenBuffers(1, &arrayBuffer);
     glGenBuffers(1, &elementBuffer);
 
+    std::vector<glm::vec3> positionsAndNormals;
     std::vector<glm::uvec3> indexes;
 
     const auto update = [&]() {
-        const std::vector<glm::vec3> &positions = model.Positions();
+        positionsAndNormals.resize(0);
+        model.PositionsAndNormals(positionsAndNormals);
 
         indexes.resize(0);
         model.TriangleIndexes(indexes);
@@ -113,8 +124,8 @@ int main() {
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
         glBufferData(
             GL_ARRAY_BUFFER,
-            positions.size() * sizeof(positions.front()),
-            positions.data(),
+            positionsAndNormals.size() * sizeof(positionsAndNormals.front()),
+            positionsAndNormals.data(),
             GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -125,6 +136,8 @@ int main() {
             indexes.data(),
             GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+        std::cout << model.Positions().size() << std::endl;
     };
 
     while (!glfwWindowShouldClose(window)) {
@@ -135,7 +148,9 @@ int main() {
         }
 
         if (elapsed.count() > 0) {
-            model.UpdateWithThreadPool(tp);
+            for (int i = 0; i < 1; i++) {
+                model.UpdateWithThreadPool(tp);
+            }
         }
 
         update();
@@ -162,9 +177,12 @@ int main() {
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
         glEnableVertexAttribArray(positionAttrib);
-        glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, false, 12, 0);
+        glEnableVertexAttribArray(normalAttrib);
+        glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, false, 24, 0);
+        glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, false, 24, (void *)12);
         glDrawElements(GL_TRIANGLES, indexes.size() * 3, GL_UNSIGNED_INT, 0);
         glDisableVertexAttribArray(positionAttrib);
+        glDisableVertexAttribArray(normalAttrib);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -175,44 +193,3 @@ int main() {
     glfwTerminate();
     return 0;
 }
-
-// #include <glm/gtx/string_cast.hpp>
-// #include <iostream>
-
-// #include "ctpl.h"
-// #include "model.h"
-// #include "sphere.h"
-// #include "stl.h"
-// #include "util.h"
-
-// int main() {
-//     const auto sphereTriangles = SphereTriangles(1);
-//     Model model(sphereTriangles);
-
-//     ctpl::thread_pool tp(4);
-
-//     for (int i = 0; ; i++) {
-//         const int n = model.Positions().size();
-//         std::cerr << i << ": " << n << std::endl;
-//         model.UpdateWithThreadPool(tp);
-//         if (n > 10752*2) {
-//             break;
-//         }
-//     }
-
-//     const auto &positions = model.Positions();
-//     const auto &links = model.Links();
-//     for (int i = 0; i < positions.size(); i++) {
-//         for (const int j : links[i]) {
-//             if (j < i) {
-//                 continue;
-//             }
-//             const auto p = positions[i];
-//             const auto q = positions[j];
-//             printf("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", p.x, p.y, p.z, q.x, q.y, q.z);
-//         }
-//     }
-
-//     const auto triangles = model.Triangulate();
-//     SaveBinarySTL("out.stl", triangles);
-// }

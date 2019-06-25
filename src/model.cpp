@@ -9,18 +9,21 @@
 #include "util.h"
 
 Model::Model(const std::vector<Triangle> &triangles) :
-    m_Index(2)
+    m_Index(4)
 {
     // default parameters
-    const float pct = 0.25;
+    float pct = 0.1;
 
     m_LinkRestLength = 1;
-    m_RadiusOfInfluence = 1;
+    m_RadiusOfInfluence = 2;
 
-    // m_SpringFactor = pct * 0.5;
-    // m_PlanarFactor = pct * 0.5;
-    // m_BulgeFactor = pct * 0.5;
-    // m_RepulsionFactor = pct * 0.5;
+    m_SpringFactor = pct * 0.5;
+    m_PlanarFactor = pct * 0.5;
+    m_BulgeFactor = pct * 0.5;
+    m_RepulsionFactor = pct * 0.5;
+
+    pct = Random(0.01, 0.3);
+    m_RadiusOfInfluence = Random(m_LinkRestLength, 4);
 
     m_SpringFactor = pct * Random(0, 1);
     m_PlanarFactor = pct * Random(0, 1);
@@ -179,13 +182,11 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
 
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
-        // m_Food[i] += Random(0, 1);
-        // const float dot = std::max(
-        //     glm::dot(CellNormal(i), glm::vec3(1, 0, 1)),
-        //     glm::dot(CellNormal(i), glm::vec3(-1, 0, 1)));
-        m_Food[i] += std::pow(glm::dot(CellNormal(i), glm::vec3(0, 0, 1)), 2);
-        m_Food[i] = std::max(0.f, m_Food[i]);
-        if (m_Food[i] > 1000) {
+        m_Food[i] += Random(0, 1);
+        // m_Food[i] += std::pow(glm::dot(CellNormal(i), glm::vec3(0, 0, 1)), 2);
+        m_Food[i] += std::pow(CellNormal(i).x, 2);
+        // m_Food[i] = std::max(0.f, m_Food[i]);
+        if (m_Food[i] > 500) {
             Split(i);
         }
     }
@@ -327,5 +328,13 @@ void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
                 result.emplace_back(i, link0, link1);
             }
         }
+    }
+}
+
+// TODO: precompute normals
+void Model::PositionsAndNormals(std::vector<glm::vec3> &result) const {
+    for (int i = 0; i < m_Positions.size(); i++) {
+        result.push_back(m_Positions[i]);
+        result.push_back(CellNormal(i));
     }
 }
