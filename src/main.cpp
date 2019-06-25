@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
             model = Model(triangles);
         }
 
-        if (model.Positions().size() > 42 * std::pow(2, 10)) {
+        if (model.Positions().size() > 42 * std::pow(2, 11)) {
             // SaveBinarySTL("out.stl", model.Triangulate());
             model = Model(triangles);
         }
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
         glm::mat4 projection = glm::perspective(
             glm::radians(30.f), aspect, 1.f, 1000.f);
         glm::vec3 eye(0, -5, 0);
-        glm::vec3 center(0, 0, 1);
+        glm::vec3 center(0, 0, 0);
         glm::vec3 up(0, 0, 1);
         glm::mat4 lookAt = glm::lookAt(eye, center, up);
         glm::mat4 matrix = projection * lookAt * rotation * modelTransform;

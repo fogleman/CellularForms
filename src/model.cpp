@@ -22,9 +22,10 @@ Model::Model(const std::vector<Triangle> &triangles) :
     }();
 
     m_LinkRestLength = averageEdgeLength * Random(0.5, 2);
-    m_SplitThreshold = 100;
+    m_LinkRestLength = 1;
+    m_SplitThreshold = 500;
 
-    m_Index = Index(m_LinkRestLength * 2);
+    m_Index = Index(m_LinkRestLength * 3);
 
     float pct = 0.1;
     m_RadiusOfInfluence = 2;
@@ -34,18 +35,11 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_BulgeFactor = pct * 0.5;
 
     pct = Random(0.01, 0.3);
-    m_RadiusOfInfluence = Random(m_LinkRestLength, m_LinkRestLength * 2);
+    m_RadiusOfInfluence = Random(m_LinkRestLength * 1, m_LinkRestLength * 3);
     m_RepulsionFactor = pct * Random(0, 1);
     m_SpringFactor = pct * Random(0, 1);
     m_PlanarFactor = pct * Random(0, 1);
     m_BulgeFactor = pct * Random(0, 1);
-
-    // m_LinkRestLength = 0.5;
-    // m_RadiusOfInfluence = 0.59522;
-    // m_SpringFactor = 0.0365116;
-    // m_PlanarFactor = 0.066402;
-    // m_BulgeFactor = 0.0557003;
-    // m_RepulsionFactor = 0.114532;
 
     std::cout << "m_LinkRestLength = " << m_LinkRestLength << std::endl;
     std::cout << "m_RadiusOfInfluence = " << m_RadiusOfInfluence << std::endl;
@@ -169,14 +163,9 @@ void Model::UpdateBatch(
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
-        // newFood[i] = m_Food[i] + Random(0, 1);
-        newFood[i] = m_Food[i] + std::max(0.f, N.z);
+        newFood[i] = m_Food[i] + Random(0, 1);
+        // newFood[i] = m_Food[i] + std::max(0.f, N.z);
         // newFood[i] = std::max(0.f, newFood[i]);
-
-        // m_Food[i] += Random(0, 1);
-        // m_Food[i] += std::pow(glm::dot(m_Normals[i], glm::vec3(0, 0, 1)), 2);
-        // m_Food[i] += std::pow(m_Normals[i].z, 2);
-        // m_Food[i] = std::max(0.f, m_Food[i]);
     }
 }
 
