@@ -12,7 +12,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_Index(2)
 {
     // default parameters
-    const float pct = 0.1;
+    const float pct = 0.25;
 
     m_LinkRestLength = 1;
     m_RadiusOfInfluence = 1;
@@ -179,7 +179,12 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
 
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
-        m_Food[i] += Random(0, 1);
+        // m_Food[i] += Random(0, 1);
+        // const float dot = std::max(
+        //     glm::dot(CellNormal(i), glm::vec3(1, 0, 1)),
+        //     glm::dot(CellNormal(i), glm::vec3(-1, 0, 1)));
+        m_Food[i] += std::pow(glm::dot(CellNormal(i), glm::vec3(0, 0, 1)), 2);
+        m_Food[i] = std::max(0.f, m_Food[i]);
         if (m_Food[i] > 1000) {
             Split(i);
         }

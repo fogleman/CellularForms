@@ -87,8 +87,8 @@ int main() {
     const auto positionAttrib = p.GetAttribLocation("position");
     const auto matrixUniform = p.GetUniformLocation("matrix");
 
-    const glm::vec3 minPosition(-30);
-    const glm::vec3 maxPosition(30);
+    const glm::vec3 minPosition(-40);
+    const glm::vec3 maxPosition(40);
 
     glm::vec3 size = maxPosition - minPosition;
     glm::vec3 center = (minPosition + maxPosition) / 2.0f;
@@ -130,6 +130,10 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            model = Model(sphereTriangles);
+        }
+
         if (elapsed.count() > 0) {
             model.UpdateWithThreadPool(tp);
         }
@@ -143,13 +147,13 @@ int main() {
         int w, h;
         glfwGetWindowSize(window, &w, &h);
         const float aspect = (float)w / (float)h;
-        const float angle = elapsed.count() * 3;
+        const float angle = 0;//elapsed.count() * 3;
         glm::mat4 rotation = glm::rotate(
             glm::mat4(1.0f), glm::radians(angle), glm::vec3(0, 0, 1));
         glm::mat4 projection = glm::perspective(
             glm::radians(30.f), aspect, 1.f, 1000.f);
         glm::vec3 eye(0, -5, 0);
-        glm::vec3 center(0);
+        glm::vec3 center(0, 0, 0);
         glm::vec3 up(0, 0, 1);
         glm::mat4 lookAt = glm::lookAt(eye, center, up);
         glm::mat4 matrix = projection * lookAt * rotation * modelTransform;
