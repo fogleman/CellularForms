@@ -87,8 +87,8 @@ int main() {
     const auto positionAttrib = p.GetAttribLocation("position");
     const auto matrixUniform = p.GetUniformLocation("matrix");
 
-    const glm::vec3 minPosition(-50);
-    const glm::vec3 maxPosition(50);
+    const glm::vec3 minPosition(-30);
+    const glm::vec3 maxPosition(30);
 
     glm::vec3 size = maxPosition - minPosition;
     glm::vec3 center = (minPosition + maxPosition) / 2.0f;
@@ -128,10 +128,13 @@ int main() {
     };
 
     while (!glfwWindowShouldClose(window)) {
-        model.UpdateWithThreadPool(tp);
-        update();
-
         elapsed = std::chrono::steady_clock::now() - startTime;
+
+        if (elapsed.count() > 0) {
+            model.UpdateWithThreadPool(tp);
+        }
+
+        update();
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

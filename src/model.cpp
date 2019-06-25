@@ -12,15 +12,20 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_Index(2)
 {
     // default parameters
-    const float pct = 0.5;
+    const float pct = 0.1;
 
     m_LinkRestLength = 1;
     m_RadiusOfInfluence = 1;
 
-    m_SpringFactor = pct * 0.5;
-    m_PlanarFactor = pct * 0.5;
-    m_BulgeFactor = pct * 0.5;
-    m_RepulsionFactor = pct * 0.5;
+    // m_SpringFactor = pct * 0.5;
+    // m_PlanarFactor = pct * 0.5;
+    // m_BulgeFactor = pct * 0.5;
+    // m_RepulsionFactor = pct * 0.5;
+
+    m_SpringFactor = pct * Random(0, 1);
+    m_PlanarFactor = pct * Random(0, 1);
+    m_BulgeFactor = pct * Random(0, 1);
+    m_RepulsionFactor = pct * Random(0, 1);
 
     // find unique vertices
     std::unordered_map<glm::vec3, int> indexes;
@@ -164,11 +169,9 @@ void Model::Update() {
 
 void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
     // update index
-    int count = 0;
     for (int i = 0; i < m_Positions.size(); i++) {
-        count += m_Index.Update(m_Positions[i], newPositions[i], i);
+        m_Index.Update(m_Positions[i], newPositions[i], i);
     }
-    // std::cout << count << std::endl;
 
     // update positions
     m_Positions = newPositions;
@@ -177,7 +180,7 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
         m_Food[i] += Random(0, 1);
-        if (m_Food[i] > 100) {
+        if (m_Food[i] > 1000) {
             Split(i);
         }
     }
