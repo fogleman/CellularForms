@@ -46,7 +46,7 @@ const vec3 color1 = vec3(0.59, 0.93, 0.54);
 
 void main() {
     vec3 normal = ec_normal;
-    // normal = normalize(cross(dFdx(ec_pos), dFdy(ec_pos)));
+    normal = normalize(cross(dFdx(ec_pos), dFdy(ec_pos)));
     float diffuse0 = max(0, dot(normal, light_direction0));
     float diffuse1 = max(0, dot(normal, light_direction1));
     float diffuse = diffuse0 * 0.75 + diffuse1 * 0.25;
@@ -147,13 +147,13 @@ int main() {
             model = Model(sphereTriangles);
         }
 
-        if (model.Positions().size() > 42 * std::pow(2, 9)) {
+        if (model.Positions().size() > 42 * std::pow(2, 10)) {
             SaveBinarySTL("out.stl", model.Triangulate());
             model = Model(sphereTriangles);
         }
 
         if (elapsed.count() > 0) {
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 1; i++) {
                 model.UpdateWithThreadPool(tp);
             }
         }

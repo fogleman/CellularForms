@@ -15,6 +15,10 @@ public:
         return m_Positions;
     }
 
+    const std::vector<glm::vec3> &Normals() const {
+        return m_Normals;
+    }
+
     const std::vector<std::vector<int>> &Links() const {
         return m_Links;
     }
@@ -26,13 +30,13 @@ public:
     void UpdateBatch(
         const int wi, const int wn,
         std::vector<glm::vec3> &newPositions,
-        std::vector<glm::vec3> &newNormals) const;
+        std::vector<glm::vec3> &newNormals,
+        std::vector<float> &newFood) const;
 
-    void UpdatePositions(
+    void Commit(
         const std::vector<glm::vec3> &&newPositions,
-        const std::vector<glm::vec3> &&newNormals);
-
-    void UpdateFood();
+        const std::vector<glm::vec3> &&newNormals,
+        const std::vector<float> &&newFood);
 
     glm::vec3 CellNormal(const int index) const;
 
@@ -57,6 +61,7 @@ private:
     float m_BulgeFactor;
     float m_RepulsionFactor;
     float m_RadiusOfInfluence;
+    float m_SplitThreshold;
 
     // position of each cell
     std::vector<glm::vec3> m_Positions;
