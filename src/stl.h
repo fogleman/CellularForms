@@ -6,6 +6,6 @@
 
 #include "triangle.h"
 
-std::vector<glm::vec3> LoadBinarySTL(std::string path);
+std::vector<Triangle> LoadBinarySTL(std::string path);
 
 void SaveBinarySTL(std::string path, const std::vector<Triangle> &triangles);

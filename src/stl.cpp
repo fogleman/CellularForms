@@ -6,22 +6,30 @@
 
 using namespace boost::interprocess;
 
-std::vector<glm::vec3> LoadBinarySTL(std::string path) {
+std::vector<Triangle> LoadBinarySTL(std::string path) {
     file_mapping fm(path.c_str(), read_only);
     mapped_region mr(fm, read_only);
     uint8_t *src = (uint8_t *)mr.get_address();
     const int numBytes = mr.get_size();
     const int numTriangles = std::max(0, (numBytes - 84) / 50);
     const int numVertices = numTriangles * 3;
-    std::vector<glm::vec3> result(numVertices);
-    auto dst = result.data();
+    std::vector<glm::vec3> positions(numVertices);
+    auto dst = positions.data();
     src += 96;
     for (int i = 0; i < numTriangles; i++) {
         memcpy(dst, src, 36);
         src += 50;
         dst += 3;
     }
-    return result;
+    std::vector<Triangle> triangles;
+    triangles.reserve(numTriangles);
+    for (int i = 0; i < positions.size(); i += 3) {
+        triangles.emplace_back(
+            positions[i+0],
+            positions[i+1],
+            positions[i+2]);
+    }
+    return triangles;
 }
 
 void SaveBinarySTL(std::string path, const std::vector<Triangle> &triangles) {

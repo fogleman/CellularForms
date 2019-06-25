@@ -56,12 +56,13 @@ void main() {
 }
 )";
 
-int main() {
+int main(int argc, char **argv) {
     auto startTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed;
 
-    const auto sphereTriangles = SphereTriangles(1);
-    Model model(sphereTriangles);
+    const auto triangles = SphereTriangles(1);
+    // const auto triangles = LoadBinarySTL(argv[1]);
+    Model model(triangles);
     ctpl::thread_pool tp(4);
 
     // while (model.Positions().size() < 50000) {
@@ -96,8 +97,18 @@ int main() {
     const auto normalAttrib = p.GetAttribLocation("normal");
     const auto matrixUniform = p.GetUniformLocation("matrix");
 
-    const glm::vec3 minPosition(-40);
-    const glm::vec3 maxPosition(40);
+    glm::vec3 minPosition = triangles.front().A();
+    glm::vec3 maxPosition = triangles.front().A();
+    for (const auto &t : triangles) {
+        minPosition = glm::min(minPosition, t.A());
+        maxPosition = glm::max(maxPosition, t.A());
+        minPosition = glm::min(minPosition, t.B());
+        maxPosition = glm::max(maxPosition, t.B());
+        minPosition = glm::min(minPosition, t.C());
+        maxPosition = glm::max(maxPosition, t.C());
+    }
+    minPosition = glm::vec3(-30);
+    maxPosition = glm::vec3(30);
 
     glm::vec3 size = maxPosition - minPosition;
     glm::vec3 center = (minPosition + maxPosition) / 2.0f;
@@ -144,12 +155,12 @@ int main() {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            model = Model(sphereTriangles);
+            model = Model(triangles);
         }
 
         if (model.Positions().size() > 42 * std::pow(2, 10)) {
-            SaveBinarySTL("out.stl", model.Triangulate());
-            model = Model(sphereTriangles);
+            // SaveBinarySTL("out.stl", model.Triangulate());
+            model = Model(triangles);
         }
 
         if (elapsed.count() > 0) {
@@ -167,13 +178,13 @@ int main() {
         int w, h;
         glfwGetWindowSize(window, &w, &h);
         const float aspect = (float)w / (float)h;
-        const float angle = 0;//elapsed.count() * 3;
+        const float angle = elapsed.count() * 3;
         glm::mat4 rotation = glm::rotate(
             glm::mat4(1.0f), glm::radians(angle), glm::vec3(0, 0, 1));
         glm::mat4 projection = glm::perspective(
             glm::radians(30.f), aspect, 1.f, 1000.f);
         glm::vec3 eye(0, -5, 0);
-        glm::vec3 center(0, 0, 0);
+        glm::vec3 center(0, 0, 1);
         glm::vec3 up(0, 0, 1);
         glm::mat4 lookAt = glm::lookAt(eye, center, up);
         glm::mat4 matrix = projection * lookAt * rotation * modelTransform;
