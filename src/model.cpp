@@ -188,6 +188,7 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     newNormals.resize(m_Normals.size());
     newFood.resize(m_Food.size());
 
+    auto done = Timed("run workers");
     const int wn = tp.size();
     std::vector<std::future<void>> results;
     results.resize(wn);
@@ -199,6 +200,7 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     for (int wi = 0; wi < wn; wi++) {
         results[wi].get();
     }
+    done();
 
     Commit(std::move(newPositions), std::move(newNormals), std::move(newFood));
 }
@@ -222,21 +224,27 @@ void Model::Commit(
     const std::vector<float> &&newFood)
 {
     // update index
+    auto done = Timed("update index");
     for (int i = 0; i < m_Positions.size(); i++) {
         m_Index.Update(m_Positions[i], newPositions[i], i);
     }
+    done();
 
     // update positions
+    done = Timed("copy vectors");
     m_Positions = newPositions;
     m_Normals = newNormals;
     m_Food = newFood;
+    done();
 
     // split
+    done = Timed("split");
     for (int i = 0; i < m_Food.size(); i++) {
         if (m_Food[i] > m_SplitThreshold) {
             Split(i);
         }
     }
+    done();
 }
 
 glm::vec3 Model::CellNormal(const int index) const {
