@@ -11,24 +11,29 @@
 Model::Model(const std::vector<Triangle> &triangles) :
     m_Index(4)
 {
-    // default parameters
-    float pct = 0.1;
-
     m_LinkRestLength = 1;
-    m_RadiusOfInfluence = 2;
 
+    float pct = 0.1;
+    m_RadiusOfInfluence = 2;
+    m_RepulsionFactor = pct * 0.5;
     m_SpringFactor = pct * 0.5;
     m_PlanarFactor = pct * 0.5;
     m_BulgeFactor = pct * 0.5;
-    m_RepulsionFactor = pct * 0.5;
 
     pct = Random(0.01, 0.3);
     m_RadiusOfInfluence = Random(m_LinkRestLength, 4);
-
+    m_RepulsionFactor = pct * Random(0, 1);
     m_SpringFactor = pct * Random(0, 1);
     m_PlanarFactor = pct * Random(0, 1);
     m_BulgeFactor = pct * Random(0, 1);
-    m_RepulsionFactor = pct * Random(0, 1);
+
+    std::cout << "m_LinkRestLength = " << m_LinkRestLength << std::endl;
+    std::cout << "m_RadiusOfInfluence = " << m_RadiusOfInfluence << std::endl;
+    std::cout << "m_SpringFactor = " << m_SpringFactor << std::endl;
+    std::cout << "m_PlanarFactor = " << m_PlanarFactor << std::endl;
+    std::cout << "m_BulgeFactor = " << m_BulgeFactor << std::endl;
+    std::cout << "m_RepulsionFactor = " << m_RepulsionFactor << std::endl;
+    std::cout << std::endl;
 
     // find unique vertices
     std::unordered_map<glm::vec3, int> indexes;
@@ -41,6 +46,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
                 indexes[v] = m_Positions.size();
                 // create new cell
                 m_Positions.push_back(v);
+                m_Normals.emplace_back(0);
                 m_Food.push_back(0);
                 m_Links.emplace_back();
             }
@@ -75,7 +81,8 @@ Model::Model(const std::vector<Triangle> &triangles) :
 
 void Model::UpdateBatch(
     const int wi, const int wn,
-    std::vector<glm::vec3> &newPositions) const
+    std::vector<glm::vec3> &newPositions,
+    std::vector<glm::vec3> &newNormals) const
 {
     const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
     const float link2 = m_LinkRestLength * m_LinkRestLength;
@@ -131,7 +138,8 @@ void Model::UpdateBatch(
             }
         }
 
-        // new position
+        // new position and normal
+        newNormals[i] = N;
         newPositions[i] = P +
             m_SpringFactor * (springTarget - P) +
             m_PlanarFactor * (planarTarget - P) +
@@ -142,35 +150,42 @@ void Model::UpdateBatch(
 
 void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     std::vector<glm::vec3> newPositions;
+    std::vector<glm::vec3> newNormals;
     newPositions.resize(m_Positions.size());
+    newNormals.resize(m_Normals.size());
 
     const int wn = tp.size();
     std::vector<std::future<void>> results;
     results.resize(wn);
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([this, wi, wn, &newPositions](int) {
-            UpdateBatch(wi, wn, newPositions);
+        results[wi] = tp.push([this, wi, wn, &newPositions, &newNormals](int) {
+            UpdateBatch(wi, wn, newPositions, newNormals);
         });
     }
     for (int wi = 0; wi < wn; wi++) {
         results[wi].get();
     }
 
-    UpdatePositions(std::move(newPositions));
+    UpdatePositions(std::move(newPositions), std::move(newNormals));
     UpdateFood();
 }
 
 void Model::Update() {
     std::vector<glm::vec3> newPositions;
+    std::vector<glm::vec3> newNormals;
     newPositions.resize(m_Positions.size());
+    newNormals.resize(m_Normals.size());
 
-    UpdateBatch(0, 1, newPositions);
+    UpdateBatch(0, 1, newPositions, newNormals);
 
-    UpdatePositions(std::move(newPositions));
+    UpdatePositions(std::move(newPositions), std::move(newNormals));
     UpdateFood();
 }
 
-void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
+void Model::UpdatePositions(
+    const std::vector<glm::vec3> &&newPositions,
+    const std::vector<glm::vec3> &&newNormals)
+{
     // update index
     for (int i = 0; i < m_Positions.size(); i++) {
         m_Index.Update(m_Positions[i], newPositions[i], i);
@@ -178,13 +193,14 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
 
     // update positions
     m_Positions = newPositions;
+    m_Normals = newNormals;
 }
 
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
         m_Food[i] += Random(0, 1);
-        // m_Food[i] += std::pow(glm::dot(CellNormal(i), glm::vec3(0, 0, 1)), 2);
-        m_Food[i] += std::pow(CellNormal(i).x, 2);
+        // m_Food[i] += std::pow(glm::dot(m_Normals[i], glm::vec3(0, 0, 1)), 2);
+        // m_Food[i] += std::pow(m_Normals[i].z, 2);
         // m_Food[i] = std::max(0.f, m_Food[i]);
         if (m_Food[i] > 500) {
             Split(i);
@@ -236,12 +252,10 @@ void Model::InsertLinkAfter(const int i, const int after, const int link) {
 }
 
 void Model::Split(const int parentIndex) {
-    // get parent position
-    const glm::vec3 P = m_Positions[parentIndex];
-
     // create the child in the same spot as the parent for now
     const int childIndex = m_Links.size();
-    m_Positions.push_back(P);
+    m_Positions.push_back(m_Positions[parentIndex]);
+    m_Normals.emplace_back(m_Normals[parentIndex]);
     m_Food.push_back(0);
     m_Links.emplace_back();
 
@@ -287,11 +301,13 @@ void Model::Split(const int parentIndex) {
     }
     newChildPosition /= childLinks.size() + 1;
 
-    // update positions and index
+    // update positions, normals, and index
+    m_Index.Update(m_Positions[parentIndex], newParentPosition, parentIndex);
+    m_Index.Add(newChildPosition, childIndex);
     m_Positions[parentIndex] = newParentPosition;
     m_Positions[childIndex] = newChildPosition;
-    m_Index.Update(P, m_Positions[parentIndex], parentIndex);
-    m_Index.Add(m_Positions[childIndex], childIndex);
+    m_Normals[parentIndex] = CellNormal(parentIndex);
+    m_Normals[childIndex] = CellNormal(childIndex);
 
     // reset parent's food level
     m_Food[parentIndex] = 0;
@@ -335,6 +351,6 @@ void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
 void Model::PositionsAndNormals(std::vector<glm::vec3> &result) const {
     for (int i = 0; i < m_Positions.size(); i++) {
         result.push_back(m_Positions[i]);
-        result.push_back(CellNormal(i));
+        result.push_back(m_Normals[i]);
     }
 }

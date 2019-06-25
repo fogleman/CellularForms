@@ -25,9 +25,12 @@ public:
 
     void UpdateBatch(
         const int wi, const int wn,
-        std::vector<glm::vec3> &newPositions) const;
+        std::vector<glm::vec3> &newPositions,
+        std::vector<glm::vec3> &newNormals) const;
 
-    void UpdatePositions(const std::vector<glm::vec3> &&newPositions);
+    void UpdatePositions(
+        const std::vector<glm::vec3> &&newPositions,
+        const std::vector<glm::vec3> &&newNormals);
 
     void UpdateFood();
 
@@ -57,6 +60,9 @@ private:
 
     // position of each cell
     std::vector<glm::vec3> m_Positions;
+
+    // normal of each cell
+    std::vector<glm::vec3> m_Normals;
 
     // food level of each cell
     std::vector<float> m_Food;
