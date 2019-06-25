@@ -43,6 +43,8 @@ public:
 
     std::vector<Triangle> Triangulate() const;
 
+    void TriangleIndexes(std::vector<glm::uvec3> &result) const;
+
 private:
     float m_LinkRestLength;
     float m_SpringFactor;

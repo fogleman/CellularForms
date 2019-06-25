@@ -177,7 +177,7 @@ void Model::UpdatePositions(const std::vector<glm::vec3> &&newPositions) {
 void Model::UpdateFood() {
     for (int i = 0; i < m_Food.size(); i++) {
         m_Food[i] += Random(0, 1);
-        if (m_Food[i] > 500) {
+        if (m_Food[i] > 100) {
             Split(i);
         }
     }
@@ -289,6 +289,7 @@ void Model::Split(const int parentIndex) {
 }
 
 std::vector<Triangle> Model::Triangulate() const {
+    // TODO: use TriangleIndexes
     std::vector<Triangle> triangles;
     for (int i = 0; i < m_Positions.size(); i++) {
         const auto &links = m_Links[i];
@@ -305,4 +306,18 @@ std::vector<Triangle> Model::Triangulate() const {
         }
     }
     return triangles;
+}
+
+void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
+    for (int i = 0; i < m_Positions.size(); i++) {
+        const auto &links = m_Links[i];
+        for (int j = 0; j < links.size(); j++) {
+            const int k = (j + 1) % links.size();
+            const int link0 = links[j];
+            const int link1 = links[k];
+            if (i < link0 && i < link1) {
+                result.emplace_back(i, link0, link1);
+            }
+        }
+    }
 }
