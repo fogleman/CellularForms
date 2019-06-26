@@ -23,7 +23,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
 
     m_LinkRestLength = averageEdgeLength * Random(0.5, 2);
     // m_LinkRestLength = 1;
-    m_SplitThreshold = 500;
+    m_SplitThreshold = 100;
 
     m_Index = Index(m_LinkRestLength * 2);
 
@@ -40,6 +40,14 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_SpringFactor = pct * Random(0, 1);
     m_PlanarFactor = pct * Random(0, 1);
     m_BulgeFactor = pct * Random(0, 1);
+
+    m_LinkRestLength = 0.991549;
+    m_RadiusOfInfluence = 1.2939;
+    m_SpringFactor = 0.188446;
+    m_PlanarFactor = 0.276574;
+    m_BulgeFactor = 0.139144;
+    m_RepulsionFactor = 0.0938309;
+
 
     std::cout << "m_LinkRestLength = " << m_LinkRestLength << std::endl;
     std::cout << "m_RadiusOfInfluence = " << m_RadiusOfInfluence << std::endl;
@@ -166,11 +174,13 @@ void Model::UpdateBatch(
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
-        newFood[i] = m_Food[i];
-        // newFood[i] = m_Food[i] + Random(0, 1);
+        newFood[i] += Random(0, 1);
+        // newFood[i] += Random(0, 1) / (std::abs(P.y) + 1);
+        // newFood[i] += glm::length(repulsionVector);
+        // newFood[i] += Random(0, 1);
         // newFood[i] = food + std::pow(std::max(0.f, N.z), 2);
         // newFood[i] = food + N.z + 0.1;
-        // newFood[i] = m_Food[i] + std::pow(std::max(0.f, N.z), 2);
+        // newFood[i] += std::pow(N.z, 2);
         // newFood[i] = std::max(0.f, newFood[i]);
     }
 }
@@ -178,15 +188,15 @@ void Model::UpdateBatch(
 void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     std::vector<glm::vec3> newPositions;
     std::vector<glm::vec3> newNormals;
-    std::vector<float> newFood;
+    std::vector<float> newFood = m_Food;
     newPositions.resize(m_Positions.size());
     newNormals.resize(m_Normals.size());
-    newFood.resize(m_Food.size());
 
-    auto done = Timed("run workers");
     const int wn = tp.size();
     std::vector<std::future<void>> results;
     results.resize(wn);
+
+    auto done = Timed("run workers");
     for (int wi = 0; wi < wn; wi++) {
         results[wi] = tp.push([this, wi, wn, &newPositions, &newNormals, &newFood](int) {
             UpdateBatch(wi, wn, newPositions, newNormals, newFood);
@@ -203,10 +213,9 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
 void Model::Update() {
     std::vector<glm::vec3> newPositions;
     std::vector<glm::vec3> newNormals;
-    std::vector<float> newFood;
+    std::vector<float> newFood = m_Food;
     newPositions.resize(m_Positions.size());
     newNormals.resize(m_Normals.size());
-    newFood.resize(m_Food.size());
 
     UpdateBatch(0, 1, newPositions, newNormals, newFood);
 

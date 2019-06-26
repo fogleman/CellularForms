@@ -65,16 +65,22 @@ int main(int argc, char **argv) {
     auto startTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed;
 
-    const auto triangles = SphereTriangles(5);
+    const auto triangles = SphereTriangles(1);
     // const auto triangles = LoadBinarySTL(argv[1]);
     Model model(triangles);
     ctpl::thread_pool tp(4);
 
-    // while (model.Positions().size() < 50000) {
+    // int iterations = 0;
+    // while (1) {
     //     model.UpdateWithThreadPool(tp);
+    //     iterations++;
+    //     elapsed = std::chrono::steady_clock::now() - startTime;
+    //     if (elapsed.count() > 60) {
+    //         std::cout << iterations << " " << model.Positions().size() << std::endl;
+    //         SaveBinarySTL("out.stl", model.Triangulate());
+    //         startTime = std::chrono::steady_clock::now();
+    //     }
     // }
-    // elapsed = std::chrono::steady_clock::now() - startTime;
-    // std::cout << elapsed.count() << std::endl;
 
     if (!glfwInit()) {
         return -1;
@@ -113,8 +119,8 @@ int main(int argc, char **argv) {
         minPosition = glm::min(minPosition, t.C());
         maxPosition = glm::max(maxPosition, t.C());
     }
-    minPosition = glm::vec3(-2);
-    maxPosition = glm::vec3(2);
+    minPosition = glm::vec3(-30);
+    maxPosition = glm::vec3(30);
 
     glm::vec3 size = maxPosition - minPosition;
     glm::vec3 center = (minPosition + maxPosition) / 2.0f;
