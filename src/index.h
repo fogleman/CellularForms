@@ -12,13 +12,13 @@ public:
 
     glm::ivec3 KeyForPoint(const glm::vec3 &point) const;
 
+    const std::vector<int> &Nearby(const glm::vec3 &point) const;
+
     void Add(const glm::vec3 &point, const int id);
 
     void Remove(const glm::vec3 &point, const int id);
 
     bool Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id);
-
-    const std::vector<int> &Nearby(const glm::vec3 &point) const;
 
 private:
     float m_CellSize;

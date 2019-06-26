@@ -23,8 +23,6 @@ public:
         return m_Links;
     }
 
-    void Update();
-
     void UpdateWithThreadPool(ctpl::thread_pool &tp);
 
     void UpdateBatch(

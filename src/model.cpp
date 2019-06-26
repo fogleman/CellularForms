@@ -174,7 +174,7 @@ void Model::UpdateBatch(
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
-        newFood[i] += Random(0, 1);
+        // newFood[i] += Random(0, 1);
         // newFood[i] += Random(0, 1) / (std::abs(P.y) + 1);
         // newFood[i] += glm::length(repulsionVector);
         // newFood[i] += Random(0, 1);
@@ -192,13 +192,13 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     newPositions.resize(m_Positions.size());
     newNormals.resize(m_Normals.size());
 
-    const int wn = tp.size();
-    std::vector<std::future<void>> results;
-    results.resize(wn);
-
     auto done = Timed("run workers");
+    const int wn = tp.size();
+    std::vector<std::future<void>> results(wn);
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([this, wi, wn, &newPositions, &newNormals, &newFood](int) {
+        results[wi] = tp.push([
+            this, wi, wn, &newPositions, &newNormals, &newFood](int)
+        {
             UpdateBatch(wi, wn, newPositions, newNormals, newFood);
         });
     }
@@ -206,18 +206,6 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
         results[wi].get();
     }
     done();
-
-    Commit(std::move(newPositions), std::move(newNormals), std::move(newFood));
-}
-
-void Model::Update() {
-    std::vector<glm::vec3> newPositions;
-    std::vector<glm::vec3> newNormals;
-    std::vector<float> newFood = m_Food;
-    newPositions.resize(m_Positions.size());
-    newNormals.resize(m_Normals.size());
-
-    UpdateBatch(0, 1, newPositions, newNormals, newFood);
 
     Commit(std::move(newPositions), std::move(newNormals), std::move(newFood));
 }
@@ -244,6 +232,7 @@ void Model::Commit(
     // split
     done = Timed("split");
     for (int i = 0; i < m_Food.size(); i++) {
+        m_Food[i] += Random(0, 1);
         if (m_Food[i] > m_SplitThreshold) {
             Split(i);
         }

@@ -68,17 +68,17 @@ int main(int argc, char **argv) {
     const auto triangles = SphereTriangles(1);
     // const auto triangles = LoadBinarySTL(argv[1]);
     Model model(triangles);
-    ctpl::thread_pool tp(4);
+    ctpl::thread_pool tp(8);
 
     // int iterations = 0;
     // while (1) {
     //     model.UpdateWithThreadPool(tp);
     //     iterations++;
-    //     elapsed = std::chrono::steady_clock::now() - startTime;
-    //     if (elapsed.count() > 60) {
-    //         std::cout << iterations << " " << model.Positions().size() << std::endl;
-    //         SaveBinarySTL("out.stl", model.Triangulate());
-    //         startTime = std::chrono::steady_clock::now();
+    //     if (iterations % 1 == 0) {
+    //         elapsed = std::chrono::steady_clock::now() - startTime;
+    //         std::cout << iterations << " " << elapsed.count() << " " << model.Positions().size() << std::endl;
+    //         // SaveBinarySTL("out.stl", model.Triangulate());
+    //         // startTime = std::chrono::steady_clock::now();
     //     }
     // }
 

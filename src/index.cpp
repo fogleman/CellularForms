@@ -11,6 +11,14 @@ glm::ivec3 Index::KeyForPoint(const glm::vec3 &point) const {
     return glm::ivec3(x, y, z);
 }
 
+const std::vector<int> &Index::Nearby(const glm::vec3 &point) const {
+    const auto it = m_Cells.find(KeyForPoint(point));
+    if (it == m_Cells.end()) {
+        return m_Empty;
+    }
+    return it->second;
+}
+
 void Index::Add(const glm::vec3 &point, const int id) {
     const glm::ivec3 key = KeyForPoint(point);
     const auto k0 = key - 1;
@@ -119,12 +127,4 @@ bool Index::Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id) {
     }
 
     return true;
-}
-
-const std::vector<int> &Index::Nearby(const glm::vec3 &point) const {
-    const auto it = m_Cells.find(KeyForPoint(point));
-    if (it == m_Cells.end()) {
-        return m_Empty;
-    }
-    return it->second;
 }
