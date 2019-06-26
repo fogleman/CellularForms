@@ -22,14 +22,17 @@ uniform mat4 matrix;
 
 attribute vec4 position;
 attribute vec3 normal;
+attribute float value;
 
 varying vec3 ec_pos;
 varying vec3 ec_normal;
+varying float ec_value;
 
 void main() {
     gl_Position = matrix * position;
     ec_pos = vec3(gl_Position);
     ec_normal = normal;
+    ec_value = value;
 }
 )";
 
@@ -38,10 +41,11 @@ std::string fragmentSource = R"(
 
 varying vec3 ec_pos;
 varying vec3 ec_normal;
+varying float ec_value;
 
 const vec3 light_direction0 = normalize(vec3(0.5, -2, 1));
 const vec3 light_direction1 = normalize(vec3(-0.5, -1, 1));
-const vec3 color0 = vec3(0.0, 0.15, 0.11);
+const vec3 color0 = vec3(0.0);//, 0.15, 0.11);
 const vec3 color1 = vec3(0.59, 0.93, 0.54);
 
 void main() {
@@ -50,8 +54,9 @@ void main() {
     float diffuse0 = max(0, dot(normal, light_direction0));
     float diffuse1 = max(0, dot(normal, light_direction1));
     float diffuse = diffuse0 * 0.75 + diffuse1 * 0.25;
-    // vec3 color = object_color * diffuse;
-    vec3 color = mix(color0, color1, diffuse);
+    vec3 valueColor = vec3(ec_value * 0.8 + 0.2);
+    valueColor = color1;
+    vec3 color = mix(color0, valueColor, diffuse);
     gl_FragColor = vec4(color, 1);
 }
 )";
@@ -60,7 +65,7 @@ int main(int argc, char **argv) {
     auto startTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed;
 
-    const auto triangles = SphereTriangles(1);
+    const auto triangles = SphereTriangles(5);
     // const auto triangles = LoadBinarySTL(argv[1]);
     Model model(triangles);
     ctpl::thread_pool tp(4);
@@ -78,7 +83,7 @@ int main(int argc, char **argv) {
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    GLFWwindow *window = glfwCreateWindow(800, 800, "Cellular Forms", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(1600, 1200, "Cellular Forms", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -91,11 +96,12 @@ int main(int argc, char **argv) {
     glCullFace(GL_BACK);
     glClearColor((float)0x2a/255, (float)0x2c/255, (float)0x2b/255, 1);
 
-    Program p(vertexSource, fragmentSource);
+    Program program(vertexSource, fragmentSource);
 
-    const auto positionAttrib = p.GetAttribLocation("position");
-    const auto normalAttrib = p.GetAttribLocation("normal");
-    const auto matrixUniform = p.GetUniformLocation("matrix");
+    const auto positionAttrib = program.GetAttribLocation("position");
+    const auto normalAttrib = program.GetAttribLocation("normal");
+    const auto valueAttrib = program.GetAttribLocation("value");
+    const auto matrixUniform = program.GetUniformLocation("matrix");
 
     glm::vec3 minPosition = triangles.front().A();
     glm::vec3 maxPosition = triangles.front().A();
@@ -107,8 +113,8 @@ int main(int argc, char **argv) {
         minPosition = glm::min(minPosition, t.C());
         maxPosition = glm::max(maxPosition, t.C());
     }
-    minPosition = glm::vec3(-30);
-    maxPosition = glm::vec3(30);
+    minPosition = glm::vec3(-2);
+    maxPosition = glm::vec3(2);
 
     glm::vec3 size = maxPosition - minPosition;
     glm::vec3 center = (minPosition + maxPosition) / 2.0f;
@@ -122,12 +128,12 @@ int main(int argc, char **argv) {
     glGenBuffers(1, &arrayBuffer);
     glGenBuffers(1, &elementBuffer);
 
-    std::vector<glm::vec3> positionsAndNormals;
+    std::vector<float> vertexAttributes;
     std::vector<glm::uvec3> indexes;
 
     const auto update = [&]() {
-        positionsAndNormals.resize(0);
-        model.PositionsAndNormals(positionsAndNormals);
+        vertexAttributes.resize(0);
+        model.VertexAttributes(vertexAttributes);
 
         indexes.resize(0);
         model.TriangleIndexes(indexes);
@@ -135,8 +141,8 @@ int main(int argc, char **argv) {
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
         glBufferData(
             GL_ARRAY_BUFFER,
-            positionsAndNormals.size() * sizeof(positionsAndNormals.front()),
-            positionsAndNormals.data(),
+            vertexAttributes.size() * sizeof(vertexAttributes.front()),
+            vertexAttributes.data(),
             GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -158,7 +164,12 @@ int main(int argc, char **argv) {
             model = Model(triangles);
         }
 
-        if (model.Positions().size() > 42 * std::pow(2, 11)) {
+        // if (elapsed.count() > 10) {
+        //     startTime = std::chrono::steady_clock::now();
+        //     model = Model(triangles);
+        // }
+
+        if (model.Positions().size() > 42 * std::pow(2, 12)) {
             // SaveBinarySTL("out.stl", model.Triangulate());
             model = Model(triangles);
         }
@@ -173,12 +184,12 @@ int main(int argc, char **argv) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        p.Use();
+        program.Use();
 
         int w, h;
         glfwGetWindowSize(window, &w, &h);
         const float aspect = (float)w / (float)h;
-        const float angle = elapsed.count() * 3;
+        const float angle = 0;//elapsed.count() * 3;
         glm::mat4 rotation = glm::rotate(
             glm::mat4(1.0f), glm::radians(angle), glm::vec3(0, 0, 1));
         glm::mat4 projection = glm::perspective(
@@ -194,11 +205,14 @@ int main(int argc, char **argv) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
         glEnableVertexAttribArray(positionAttrib);
         glEnableVertexAttribArray(normalAttrib);
-        glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, false, 24, 0);
-        glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, false, 24, (void *)12);
+        glEnableVertexAttribArray(valueAttrib);
+        glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, false, 28, 0);
+        glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, false, 28, (void *)12);
+        glVertexAttribPointer(valueAttrib, 1, GL_FLOAT, false, 28, (void *)24);
         glDrawElements(GL_TRIANGLES, indexes.size() * 3, GL_UNSIGNED_INT, 0);
         glDisableVertexAttribArray(positionAttrib);
         glDisableVertexAttribArray(normalAttrib);
+        glDisableVertexAttribArray(valueAttrib);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 

@@ -22,10 +22,10 @@ Model::Model(const std::vector<Triangle> &triangles) :
     }();
 
     m_LinkRestLength = averageEdgeLength * Random(0.5, 2);
-    m_LinkRestLength = 1;
+    // m_LinkRestLength = 1;
     m_SplitThreshold = 500;
 
-    m_Index = Index(m_LinkRestLength * 3);
+    m_Index = Index(m_LinkRestLength * 2);
 
     float pct = 0.1;
     m_RadiusOfInfluence = 2;
@@ -35,7 +35,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_BulgeFactor = pct * 0.5;
 
     pct = Random(0.01, 0.3);
-    m_RadiusOfInfluence = Random(m_LinkRestLength * 1, m_LinkRestLength * 3);
+    m_RadiusOfInfluence = Random(m_LinkRestLength * 1, m_LinkRestLength * 2);
     m_RepulsionFactor = pct * Random(0, 1);
     m_SpringFactor = pct * Random(0, 1);
     m_PlanarFactor = pct * Random(0, 1);
@@ -114,6 +114,7 @@ void Model::UpdateBatch(
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
+        float food = 0;
         for (const int j : links) {
             const glm::vec3 &L = m_Positions[j];
             const glm::vec3 D = L - P;
@@ -126,6 +127,7 @@ void Model::UpdateBatch(
                 bulgeDistance += std::sqrt(
                     link2 - glm::dot(D, D) + dot * dot) + dot;
             }
+            food += m_Food[j];
             if (length2 < roi2) {
                 // linked cells will be repulsed in the repulsion step below
                 // so, here we add in the opposite to counteract it for
@@ -140,6 +142,7 @@ void Model::UpdateBatch(
         springTarget *= m;
         planarTarget *= m;
         bulgeDistance *= m;
+        food *= m;
 
         // repulsion
         for (const int j : m_Index.Nearby(P)) {
@@ -163,8 +166,11 @@ void Model::UpdateBatch(
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
-        newFood[i] = m_Food[i] + Random(0, 1);
-        // newFood[i] = m_Food[i] + std::max(0.f, N.z);
+        newFood[i] = m_Food[i];
+        // newFood[i] = m_Food[i] + Random(0, 1);
+        // newFood[i] = food + std::pow(std::max(0.f, N.z), 2);
+        // newFood[i] = food + N.z + 0.1;
+        // newFood[i] = m_Food[i] + std::pow(std::max(0.f, N.z), 2);
         // newFood[i] = std::max(0.f, newFood[i]);
     }
 }
@@ -367,9 +373,18 @@ void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
     }
 }
 
-void Model::PositionsAndNormals(std::vector<glm::vec3> &result) const {
+void Model::VertexAttributes(std::vector<float> &result) const {
     for (int i = 0; i < m_Positions.size(); i++) {
-        result.push_back(m_Positions[i]);
-        result.push_back(m_Normals[i]);
+        const auto &p = m_Positions[i];
+        const auto &n = m_Normals[i];
+        const float value = m_Food[i] / m_SplitThreshold;
+        // const float value = i / (float)(m_Positions.size() - 1);
+        result.push_back(p.x);
+        result.push_back(p.y);
+        result.push_back(p.z);
+        result.push_back(n.x);
+        result.push_back(n.y);
+        result.push_back(n.z);
+        result.push_back(value);
     }
 }
