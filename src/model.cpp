@@ -25,8 +25,6 @@ Model::Model(const std::vector<Triangle> &triangles) :
     // m_LinkRestLength = 1;
     m_SplitThreshold = 100;
 
-    m_Index = Index(m_LinkRestLength * 2);
-
     float pct = 0.1;
     m_RadiusOfInfluence = 2;
     m_RepulsionFactor = pct * 0.5;
@@ -48,6 +46,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_BulgeFactor = 0.139144;
     m_RepulsionFactor = 0.0938309;
 
+    m_Index = Index(m_RadiusOfInfluence * 1.2);
 
     std::cout << "m_LinkRestLength = " << m_LinkRestLength << std::endl;
     std::cout << "m_RadiusOfInfluence = " << m_RadiusOfInfluence << std::endl;
@@ -192,14 +191,30 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     newPositions.resize(m_Positions.size());
     newNormals.resize(m_Normals.size());
 
-    auto done = Timed("run workers");
     const int wn = tp.size();
     std::vector<std::future<void>> results(wn);
+
+    auto done = Timed("run workers");
     for (int wi = 0; wi < wn; wi++) {
         results[wi] = tp.push([
             this, wi, wn, &newPositions, &newNormals, &newFood](int)
         {
             UpdateBatch(wi, wn, newPositions, newNormals, newFood);
+        });
+    }
+    for (int wi = 0; wi < wn; wi++) {
+        results[wi].get();
+    }
+    done();
+
+    done = Timed("update index");
+    for (int wi = 0; wi < wn; wi++) {
+        results[wi] = tp.push([
+            this, wi, wn, &newPositions](int)
+        {
+            for (int i = wi; i < m_Positions.size(); i += wn) {
+                m_Index.Update(m_Positions[i], newPositions[i], i);
+            }
         });
     }
     for (int wi = 0; wi < wn; wi++) {
@@ -215,15 +230,8 @@ void Model::Commit(
     const std::vector<glm::vec3> &&newNormals,
     const std::vector<float> &&newFood)
 {
-    // update index
-    auto done = Timed("update index");
-    for (int i = 0; i < m_Positions.size(); i++) {
-        m_Index.Update(m_Positions[i], newPositions[i], i);
-    }
-    done();
-
     // update positions
-    done = Timed("copy vectors");
+    auto done = Timed("copy vectors");
     m_Positions = newPositions;
     m_Normals = newNormals;
     m_Food = newFood;

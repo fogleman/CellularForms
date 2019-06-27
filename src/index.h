@@ -2,15 +2,17 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
 class Index {
 public:
-    Index(const float cellSize) :
-        m_CellSize(cellSize) {}
+    Index(const float cellSize);
 
     glm::ivec3 KeyForPoint(const glm::vec3 &point) const;
+
+    int IndexForKey(const glm::ivec3 &key) const;
 
     const std::vector<int> &Nearby(const glm::vec3 &point) const;
 
@@ -22,6 +24,8 @@ public:
 
 private:
     float m_CellSize;
-    std::unordered_map<glm::ivec3, std::vector<int>> m_Cells;
-    std::vector<int> m_Empty;
+    glm::ivec3 m_Start;
+    glm::ivec3 m_Size;
+    std::vector<std::vector<int>> m_Cells;
+    std::vector<std::mutex> m_Locks;
 };

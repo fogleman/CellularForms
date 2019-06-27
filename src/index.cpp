@@ -4,6 +4,15 @@
 
 #define DEBUG_INDEX 0
 
+Index::Index(const float cellSize) :
+    m_CellSize(cellSize),
+    m_Start(-100, -100, -100),
+    m_Size(200, 200, 200),
+    m_Cells(m_Size.x * m_Size.y * m_Size.z),
+    m_Locks(1024)
+{
+}
+
 glm::ivec3 Index::KeyForPoint(const glm::vec3 &point) const {
     const int x = std::roundf(point.x / m_CellSize);
     const int y = std::roundf(point.y / m_CellSize);
@@ -11,12 +20,13 @@ glm::ivec3 Index::KeyForPoint(const glm::vec3 &point) const {
     return glm::ivec3(x, y, z);
 }
 
+int Index::IndexForKey(const glm::ivec3 &key) const {
+    const auto d = key - m_Start;
+    return d.x + (d.y * m_Size.x) + (d.z * m_Size.x * m_Size.y);
+}
+
 const std::vector<int> &Index::Nearby(const glm::vec3 &point) const {
-    const auto it = m_Cells.find(KeyForPoint(point));
-    if (it == m_Cells.end()) {
-        return m_Empty;
-    }
-    return it->second;
+    return m_Cells[IndexForKey(KeyForPoint(point))];
 }
 
 void Index::Add(const glm::vec3 &point, const int id) {
@@ -26,7 +36,7 @@ void Index::Add(const glm::vec3 &point, const int id) {
     for (int x = k0.x; x <= k1.x; x++) {
         for (int y = k0.y; y <= k1.y; y++) {
             for (int z = k0.z; z <= k1.z; z++) {
-                auto &ids = m_Cells[glm::ivec3(x, y, z)];
+                auto &ids = m_Cells[IndexForKey(glm::ivec3(x, y, z))];
                 #if DEBUG_INDEX
                     const auto it = std::find(ids.begin(), ids.end(), id);
                     if (it != ids.end()) {
@@ -46,7 +56,7 @@ void Index::Remove(const glm::vec3 &point, const int id) {
     for (int x = k0.x; x <= k1.x; x++) {
         for (int y = k0.y; y <= k1.y; y++) {
             for (int z = k0.z; z <= k1.z; z++) {
-                auto &ids = m_Cells[glm::ivec3(x, y, z)];
+                auto &ids = m_Cells[IndexForKey(glm::ivec3(x, y, z))];
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 #if DEBUG_INDEX
                     if (it == ids.end()) {
@@ -94,7 +104,8 @@ bool Index::Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id) {
                 if (in1(x, y, z)) {
                     continue;
                 }
-                auto &ids = m_Cells[glm::ivec3(x, y, z)];
+                auto &ids = m_Cells[IndexForKey(glm::ivec3(x, y, z))];
+                std::lock_guard<std::mutex> guard(m_Locks[(x + y + z) % m_Locks.size()]);
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 #if DEBUG_INDEX
                     if (it == ids.end()) {
@@ -114,7 +125,8 @@ bool Index::Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id) {
                 if (in0(x, y, z)) {
                     continue;
                 }
-                auto &ids = m_Cells[glm::ivec3(x, y, z)];
+                auto &ids = m_Cells[IndexForKey(glm::ivec3(x, y, z))];
+                std::lock_guard<std::mutex> guard(m_Locks[(x + y + z) % m_Locks.size()]);
                 #if DEBUG_INDEX
                     const auto it = std::find(ids.begin(), ids.end(), id);
                     if (it != ids.end()) {
