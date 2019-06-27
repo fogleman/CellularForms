@@ -25,16 +25,7 @@ public:
 
     void UpdateWithThreadPool(ctpl::thread_pool &tp);
 
-    void UpdateBatch(
-        const int wi, const int wn,
-        std::vector<glm::vec3> &newPositions,
-        std::vector<glm::vec3> &newNormals,
-        std::vector<float> &newFood) const;
-
-    void Commit(
-        const std::vector<glm::vec3> &&newPositions,
-        const std::vector<glm::vec3> &&newNormals,
-        const std::vector<float> &&newFood);
+    void UpdateBatch(const int wi, const int wn);
 
     glm::vec3 CellNormal(const int index) const;
 
@@ -75,4 +66,9 @@ private:
 
     // spatial hash index
     Index m_Index;
+
+    // buffers
+    std::vector<glm::vec3> m_NewPositions;
+    std::vector<glm::vec3> m_NewNormals;
+    std::vector<float> m_NewFood;
 };

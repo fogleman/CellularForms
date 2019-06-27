@@ -71,13 +71,15 @@ int main(int argc, char **argv) {
     ctpl::thread_pool tp(4);
 
     int iterations = 0;
+    char filename[1024];
     while (1) {
         model.UpdateWithThreadPool(tp);
         iterations++;
-        if (iterations % 1 == 0) {
+        if (iterations % 1000 == 0) {
+            sprintf(filename, "out%08d.stl", iterations);
+            SaveBinarySTL(filename, model.Triangulate());
             elapsed = std::chrono::steady_clock::now() - startTime;
             std::cout << iterations << " " << elapsed.count() << " " << model.Positions().size() << std::endl;
-            // SaveBinarySTL("out.stl", model.Triangulate());
             // startTime = std::chrono::steady_clock::now();
         }
     }
@@ -119,8 +121,8 @@ int main(int argc, char **argv) {
         minPosition = glm::min(minPosition, t.C());
         maxPosition = glm::max(maxPosition, t.C());
     }
-    minPosition = glm::vec3(-30);
-    maxPosition = glm::vec3(30);
+    minPosition = glm::vec3(-60);
+    maxPosition = glm::vec3(60);
 
     glm::vec3 size = maxPosition - minPosition;
     glm::vec3 center = (minPosition + maxPosition) / 2.0f;

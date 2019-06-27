@@ -23,7 +23,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
 
     m_LinkRestLength = averageEdgeLength * Random(0.5, 2);
     // m_LinkRestLength = 1;
-    m_SplitThreshold = 100;
+    m_SplitThreshold = 1000;
 
     float pct = 0.1;
     m_RadiusOfInfluence = 2;
@@ -39,12 +39,12 @@ Model::Model(const std::vector<Triangle> &triangles) :
     m_PlanarFactor = pct * Random(0, 1);
     m_BulgeFactor = pct * Random(0, 1);
 
-    m_LinkRestLength = 0.991549;
-    m_RadiusOfInfluence = 1.2939;
-    m_SpringFactor = 0.188446;
-    m_PlanarFactor = 0.276574;
-    m_BulgeFactor = 0.139144;
-    m_RepulsionFactor = 0.0938309;
+    m_LinkRestLength = 1;
+    m_RadiusOfInfluence = 1.2;
+    m_SpringFactor = 0.25;
+    m_PlanarFactor = 0.1;
+    m_BulgeFactor = 0.1;
+    m_RepulsionFactor = 0.2;
 
     m_Index = Index(m_RadiusOfInfluence * 1.2);
 
@@ -101,12 +101,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
     }
 }
 
-void Model::UpdateBatch(
-    const int wi, const int wn,
-    std::vector<glm::vec3> &newPositions,
-    std::vector<glm::vec3> &newNormals,
-    std::vector<float> &newFood) const
-{
+void Model::UpdateBatch(const int wi, const int wn) {
     const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
     const float link2 = m_LinkRestLength * m_LinkRestLength;
 
@@ -121,7 +116,7 @@ void Model::UpdateBatch(
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
-        float food = 0;
+        // float food = 0;
         for (const int j : links) {
             const glm::vec3 &L = m_Positions[j];
             const glm::vec3 D = L - P;
@@ -134,7 +129,7 @@ void Model::UpdateBatch(
                 bulgeDistance += std::sqrt(
                     link2 - glm::dot(D, D) + dot * dot) + dot;
             }
-            food += m_Food[j];
+            // food += m_Food[j];
             if (length2 < roi2) {
                 // linked cells will be repulsed in the repulsion step below
                 // so, here we add in the opposite to counteract it for
@@ -145,11 +140,11 @@ void Model::UpdateBatch(
         }
 
         // average
-        const float m = 1 / static_cast<float>(links.size());
+        const float m = 1.f / static_cast<float>(links.size());
         springTarget *= m;
         planarTarget *= m;
         bulgeDistance *= m;
-        food *= m;
+        // food *= m;
 
         // repulsion
         for (const int j : m_Index.Nearby(P)) {
@@ -166,8 +161,8 @@ void Model::UpdateBatch(
         }
 
         // results
-        newNormals[i] = N;
-        newPositions[i] = P +
+        m_NewNormals[i] = N;
+        m_NewPositions[i] = P +
             m_SpringFactor * (springTarget - P) +
             m_PlanarFactor * (planarTarget - P) +
             (m_BulgeFactor * bulgeDistance) * N +
@@ -185,21 +180,17 @@ void Model::UpdateBatch(
 }
 
 void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
-    std::vector<glm::vec3> newPositions;
-    std::vector<glm::vec3> newNormals;
-    std::vector<float> newFood = m_Food;
-    newPositions.resize(m_Positions.size());
-    newNormals.resize(m_Normals.size());
+    m_NewPositions.resize(m_Positions.size());
+    m_NewNormals.resize(m_Normals.size());
+    m_NewFood.resize(m_Food.size());
 
     const int wn = tp.size();
     std::vector<std::future<void>> results(wn);
 
     auto done = Timed("run workers");
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([
-            this, wi, wn, &newPositions, &newNormals, &newFood](int)
-        {
-            UpdateBatch(wi, wn, newPositions, newNormals, newFood);
+        results[wi] = tp.push([this, wi, wn](int) {
+            UpdateBatch(wi, wn);
         });
     }
     for (int wi = 0; wi < wn; wi++) {
@@ -209,11 +200,9 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
 
     done = Timed("update index");
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([
-            this, wi, wn, &newPositions](int)
-        {
+        results[wi] = tp.push([this, wi, wn](int) {
             for (int i = wi; i < m_Positions.size(); i += wn) {
-                m_Index.Update(m_Positions[i], newPositions[i], i);
+                m_Index.Update(m_Positions[i], m_NewPositions[i], i);
             }
         });
     }
@@ -222,19 +211,11 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     }
     done();
 
-    Commit(std::move(newPositions), std::move(newNormals), std::move(newFood));
-}
-
-void Model::Commit(
-    const std::vector<glm::vec3> &&newPositions,
-    const std::vector<glm::vec3> &&newNormals,
-    const std::vector<float> &&newFood)
-{
-    // update positions
-    auto done = Timed("copy vectors");
-    m_Positions = newPositions;
-    m_Normals = newNormals;
-    m_Food = newFood;
+    // commit
+    done = Timed("commit");
+    m_Positions = m_NewPositions;
+    m_Normals = m_NewNormals;
+    // m_Food = newFood;
     done();
 
     // split
