@@ -115,7 +115,7 @@ void RunGUI(Model &model) {
         currentMax += (targetMax - currentMax) * 0.01f;
         const glm::vec3 size = currentMax - currentMin;
         const glm::vec3 center = (currentMin + currentMax) / 2.0f;
-        const float scale = glm::compMax(glm::vec3(2) / size);
+        const float scale = glm::compMin(glm::vec3(2) / size);
         const glm::mat4 modelTransform =
             glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
             glm::translate(glm::mat4(1.0f), -center);
