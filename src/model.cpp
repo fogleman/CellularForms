@@ -81,6 +81,15 @@ Model::Model(
     }
 }
 
+void Model::Bounds(glm::vec3 &min, glm::vec3 &max) const {
+    min = m_Positions[0];
+    max = m_Positions[0];
+    for (const auto &p : m_Positions) {
+        min = glm::min(min, p);
+        max = glm::max(max, p);
+    }
+}
+
 void Model::UpdateBatch(const int wi, const int wn) {
     const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
     const float link2 = m_LinkRestLength * m_LinkRestLength;

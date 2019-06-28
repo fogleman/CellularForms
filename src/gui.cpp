@@ -94,26 +94,6 @@ void RunGUI(Model &model) {
     const auto valueAttrib = program.GetAttribLocation("value");
     const auto matrixUniform = program.GetUniformLocation("matrix");
 
-    // glm::vec3 minPosition = triangles.front().A();
-    // glm::vec3 maxPosition = triangles.front().A();
-    // for (const auto &t : triangles) {
-    //     minPosition = glm::min(minPosition, t.A());
-    //     maxPosition = glm::max(maxPosition, t.A());
-    //     minPosition = glm::min(minPosition, t.B());
-    //     maxPosition = glm::max(maxPosition, t.B());
-    //     minPosition = glm::min(minPosition, t.C());
-    //     maxPosition = glm::max(maxPosition, t.C());
-    // }
-    glm::vec3 minPosition = glm::vec3(-60);
-    glm::vec3 maxPosition = glm::vec3(60);
-
-    glm::vec3 size = maxPosition - minPosition;
-    glm::vec3 center = (minPosition + maxPosition) / 2.0f;
-    const float scale = glm::compMax(glm::vec3(2) / size);
-    glm::mat4 modelTransform =
-        glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
-        glm::translate(glm::mat4(1.0f), -center);
-
     GLuint arrayBuffer;
     GLuint elementBuffer;
     glGenBuffers(1, &arrayBuffer);
@@ -121,6 +101,26 @@ void RunGUI(Model &model) {
 
     std::vector<float> vertexAttributes;
     std::vector<glm::uvec3> indexes;
+
+    glm::vec3 currentMin, currentMax;
+    glm::vec3 targetMin, targetMax;
+    model.Bounds(currentMin, currentMax);
+
+    const auto getModelTransform = [&]() {
+        glm::vec3 min, max;
+        model.Bounds(min, max);
+        targetMin = glm::min(targetMin, min);
+        targetMax = glm::max(targetMax, max);
+        currentMin += (targetMin - currentMin) * 0.01f;
+        currentMax += (targetMax - currentMax) * 0.01f;
+        const glm::vec3 size = currentMax - currentMin;
+        const glm::vec3 center = (currentMin + currentMax) / 2.0f;
+        const float scale = glm::compMax(glm::vec3(2) / size);
+        const glm::mat4 modelTransform =
+            glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
+            glm::translate(glm::mat4(1.0f), -center);
+        return modelTransform;
+    };
 
     const auto updateBuffers = [&]() {
         vertexAttributes.resize(0);
@@ -164,7 +164,7 @@ void RunGUI(Model &model) {
         int w, h;
         glfwGetWindowSize(window, &w, &h);
         const float aspect = (float)w / (float)h;
-        const float angle = 0;//elapsed.count() * 3;
+        const float angle = elapsed.count() * 3;
         glm::mat4 rotation = glm::rotate(
             glm::mat4(1.0f), glm::radians(angle), glm::vec3(0, 0, 1));
         glm::mat4 projection = glm::perspective(
@@ -173,7 +173,7 @@ void RunGUI(Model &model) {
         glm::vec3 center(0, 0, 0);
         glm::vec3 up(0, 0, 1);
         glm::mat4 lookAt = glm::lookAt(eye, center, up);
-        glm::mat4 matrix = projection * lookAt * rotation * modelTransform;
+        glm::mat4 matrix = projection * lookAt * rotation * getModelTransform();
         glUniformMatrix4fv(matrixUniform, 1, GL_FALSE, glm::value_ptr(matrix));
 
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);

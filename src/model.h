@@ -31,6 +31,8 @@ public:
         return m_Links;
     }
 
+    void Bounds(glm::vec3 &min, glm::vec3 &max) const;
+
     void UpdateWithThreadPool(ctpl::thread_pool &tp);
 
     void UpdateBatch(const int wi, const int wn);
