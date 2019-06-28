@@ -33,7 +33,7 @@ std::vector<Triangle> LoadBinarySTL(std::string path) {
 }
 
 void SaveBinarySTL(std::string path, const std::vector<Triangle> &triangles) {
-    const int numBytes = triangles.size() * 50 + 84;
+    const uint64_t numBytes = uint64_t(triangles.size()) * 50 + 84;
 
     {
         file_mapping::remove(path.c_str());
@@ -52,10 +52,10 @@ void SaveBinarySTL(std::string path, const std::vector<Triangle> &triangles) {
     const uint32_t count = triangles.size();
     memcpy(dst + 80, &count, 4);
 
-    for (int i = 0; i < triangles.size(); i++) {
+    for (uint32_t i = 0; i < triangles.size(); i++) {
         const Triangle &t = triangles[i];
         const glm::vec3 normal = t.Normal();
-        const int idx = 84 + i * 50;
+        const uint64_t idx = 84 + i * 50;
         memcpy(dst + idx + 0, &normal, 12);
         memcpy(dst + idx + 12, &t.A(), 12);
         memcpy(dst + idx + 24, &t.B(), 12);

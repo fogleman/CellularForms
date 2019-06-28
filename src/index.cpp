@@ -6,8 +6,8 @@
 
 Index::Index(const float cellSize) :
     m_CellSize(cellSize),
-    m_Start(-100, -100, -100),
-    m_Size(200, 200, 200),
+    m_Start(-250, -250, -250),
+    m_Size(500, 500, 500),
     m_Cells(m_Size.x * m_Size.y * m_Size.z),
     m_Locks(1024)
 {
