@@ -44,8 +44,8 @@ varying float ec_value;
 
 const vec3 light_direction0 = normalize(vec3(0.5, -2, 1));
 const vec3 light_direction1 = normalize(vec3(-0.5, -1, 1));
-const vec3 color0 = vec3(0.0);//, 0.15, 0.11);
 const vec3 color1 = vec3(0.59, 0.93, 0.54);
+const vec3 color0 = color1 * 0.1;//, 0.15, 0.11);
 
 void main() {
     vec3 normal = ec_normal;
@@ -113,6 +113,8 @@ void RunGUI(Model &model) {
         targetMax = glm::max(targetMax, max);
         currentMin += (targetMin - currentMin) * 0.01f;
         currentMax += (targetMax - currentMax) * 0.01f;
+        currentMin = glm::vec3(-250);
+        currentMax = glm::vec3(250);
         const glm::vec3 size = currentMax - currentMin;
         const glm::vec3 center = (currentMin + currentMax) / 2.0f;
         const float scale = glm::compMin(glm::vec3(2) / size);
@@ -164,7 +166,7 @@ void RunGUI(Model &model) {
         int w, h;
         glfwGetWindowSize(window, &w, &h);
         const float aspect = (float)w / (float)h;
-        const float angle = elapsed.count() * 3;
+        const float angle = 0;//elapsed.count() * 3;
         glm::mat4 rotation = glm::rotate(
             glm::mat4(1.0f), glm::radians(angle), glm::vec3(0, 0, 1));
         glm::mat4 projection = glm::perspective(

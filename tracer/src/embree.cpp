@@ -169,7 +169,7 @@ EmbreeSpheres::EmbreeSpheres(std::string path, const P_Material &material) :
         const float x = p.X();
         const float y = p.Y();
         const float z = p.Z();
-        const float r = it.second / 2;
+        const float r = it.second * 0.5;
         spheres.push_back(Sphere{x, y, z, r});
     }
 
@@ -266,5 +266,6 @@ bool EmbreeSpheres::Hit(const Ray &ray, const real tmin, const real tmax, HitInf
     hit.Position = Vec3(x, y, z);
     hit.Normal = Normalized(Vec3(r.hit.Ng_x, r.hit.Ng_y, r.hit.Ng_z));
     hit.Material = m_Materials[r.hit.primID];
+    // hit.Material = m_Material;
     return true;
 }

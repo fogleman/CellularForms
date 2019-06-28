@@ -6,13 +6,13 @@
 #include "sphere.h"
 #include "stl.h"
 
-const float SplitThreshold = 1000;
+const float SplitThreshold = 2000;
 const float LinkRestLength = 1;
-const float RadiusOfInfluence = 1.2;
+const float RadiusOfInfluence = 20;
 const float RepulsionFactor = 0.2;
-const float SpringFactor = 0.25;
-const float PlanarFactor = 0.1;
-const float BulgeFactor = 0.1;
+const float SpringFactor = 0.8;
+const float PlanarFactor = 0.2;
+const float BulgeFactor = 0.2;
 
 void RunForever(Model &model) {
     const auto startTime = std::chrono::steady_clock::now();
@@ -54,8 +54,8 @@ int main() {
         SplitThreshold, LinkRestLength, RadiusOfInfluence,
         RepulsionFactor, SpringFactor, PlanarFactor, BulgeFactor);
 
-    RunGUI(model);
-    // RunForever(model);
+    // RunGUI(model);
+    RunForever(model);
 
     return 0;
 }

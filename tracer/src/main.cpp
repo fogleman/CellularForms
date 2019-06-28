@@ -16,18 +16,18 @@
 #include "util.h"
 #include "vec3.h"
 
-const int w = 4096;
-const int h = 4096;
+const int w = 4096/2;
+const int h = 4096/2;
 const int ns = 16;
 const int wn = 4;
 
 Vec3 background(const Ray &ray) {
-    return Vec3();
+    return Vec3(0);
 }
 
 Vec3 iterative(const HittableList &world, const Ray &cameraRay) {
-    const int minBounces = 8;
-    const int maxBounces = 64;
+    const int minBounces = 4;
+    const int maxBounces = 8;
 
     Vec3 color(0, 0, 0);
     Vec3 throughput(1, 1, 1);
@@ -121,21 +121,26 @@ int main(int argc, char **argv) {
     HittableList world;
 
     const auto material = std::make_shared<Lambertian>(
-        std::make_shared<SolidTexture>(HexColor(0xF2836B)));
+        std::make_shared<SolidTexture>(HexColor(0x808080)));
     const auto geom = std::make_shared<EmbreeSpheres>(argv[1], material);
 
     world.Add(geom);
 
     const auto light = std::make_shared<DiffuseLight>(
         std::make_shared<SolidTexture>(Kelvin(5000) * 25));
-    const auto L = std::make_shared<Sphere>(Vec3(3, 4, 0), 1, light);
+    const auto L = std::make_shared<Sphere>(Vec3(1, 1, 5), 1, light);
     world.Add(L);
     world.AddLight(L);
 
-    const Vec3 eye(2, 1, 2);
+    // const auto floorMaterial = std::make_shared<Lambertian>(
+    //     std::make_shared<SolidTexture>(HexColor(0xFFFFFF)));
+    // const auto floor = std::make_shared<Sphere>(Vec3(0, 0, -1000), 1000, floorMaterial);
+    // world.Add(floor);
+
+    const Vec3 eye(2, 2, 1);
     const Vec3 center(0, 0, 0);
-    const Vec3 up(0, 1, 0);
-    const real fovy = 22;
+    const Vec3 up(0, 0, 1);
+    const real fovy = 25;
     const real aspect = real(w) / real(h);
     const real aperture = 0.005;
     const real focusDistance = (eye - center).Length() - 0.35;
