@@ -4,6 +4,7 @@
 
 #define DEBUG_INDEX 0
 
+// TODO: grow-able index
 Index::Index(const float cellSize) :
     m_CellSize(cellSize),
     m_Start(-250, -250, -250),

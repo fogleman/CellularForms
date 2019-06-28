@@ -9,7 +9,15 @@
 
 class Model {
 public:
-    Model(const std::vector<Triangle> &triangles);
+    Model(
+        const std::vector<Triangle> &triangles,
+        const float splitThreshold,
+        const float linkRestLength,
+        const float radiusOfInfluence,
+        const float repulsionFactor,
+        const float springFactor,
+        const float planarFactor,
+        const float bulgeFactor);
 
     const std::vector<glm::vec3> &Positions() const {
         return m_Positions;
@@ -44,13 +52,20 @@ public:
     void VertexAttributes(std::vector<float> &result) const;
 
 private:
+    // amount of food required for a cell to split
+    float m_SplitThreshold;
+
+    // preferred distance between linked cells
     float m_LinkRestLength;
+
+    // distance at which non-linked cells will repel each other
+    float m_RadiusOfInfluence;
+
+    // weights
+    float m_RepulsionFactor;
     float m_SpringFactor;
     float m_PlanarFactor;
     float m_BulgeFactor;
-    float m_RepulsionFactor;
-    float m_RadiusOfInfluence;
-    float m_SplitThreshold;
 
     // position of each cell
     std::vector<glm::vec3> m_Positions;
@@ -70,5 +85,4 @@ private:
     // buffers
     std::vector<glm::vec3> m_NewPositions;
     std::vector<glm::vec3> m_NewNormals;
-    std::vector<float> m_NewFood;
 };

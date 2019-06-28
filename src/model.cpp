@@ -8,55 +8,35 @@
 
 #include "util.h"
 
-Model::Model(const std::vector<Triangle> &triangles) :
-    m_Index(1)
+Model::Model(
+    const std::vector<Triangle> &triangles,
+    const float splitThreshold,
+    const float linkRestLength,
+    const float radiusOfInfluence,
+    const float repulsionFactor,
+    const float springFactor,
+    const float planarFactor,
+    const float bulgeFactor) :
+    m_SplitThreshold(splitThreshold),
+    m_LinkRestLength(linkRestLength),
+    m_RadiusOfInfluence(radiusOfInfluence),
+    m_RepulsionFactor(repulsionFactor),
+    m_SpringFactor(springFactor),
+    m_PlanarFactor(planarFactor),
+    m_BulgeFactor(bulgeFactor),
+    m_Index(radiusOfInfluence * 1.2)
 {
-    const float averageEdgeLength = [&triangles]() {
-        float sum = 0;
-        for (const auto &t : triangles) {
-            sum += glm::distance(t.A(), t.B());
-            sum += glm::distance(t.B(), t.C());
-            sum += glm::distance(t.C(), t.A());
-        }
-        return sum / (triangles.size() * 3);
-    }();
+    // const float averageEdgeLength = [&triangles]() {
+    //     float sum = 0;
+    //     for (const auto &t : triangles) {
+    //         sum += glm::distance(t.A(), t.B());
+    //         sum += glm::distance(t.B(), t.C());
+    //         sum += glm::distance(t.C(), t.A());
+    //     }
+    //     return sum / (triangles.size() * 3);
+    // }();
 
-    m_LinkRestLength = averageEdgeLength * Random(0.5, 2);
-    // m_LinkRestLength = 1;
-    m_SplitThreshold = 1000;
-
-    float pct = 0.1;
-    m_RadiusOfInfluence = 2;
-    m_RepulsionFactor = pct * 0.5;
-    m_SpringFactor = pct * 0.5;
-    m_PlanarFactor = pct * 0.5;
-    m_BulgeFactor = pct * 0.5;
-
-    pct = Random(0.01, 0.3);
-    m_RadiusOfInfluence = Random(m_LinkRestLength * 1, m_LinkRestLength * 2);
-    m_RepulsionFactor = pct * Random(0, 1);
-    m_SpringFactor = pct * Random(0, 1);
-    m_PlanarFactor = pct * Random(0, 1);
-    m_BulgeFactor = pct * Random(0, 1);
-
-    m_LinkRestLength = 1;
-    m_RadiusOfInfluence = 1.2;
-    m_SpringFactor = 0.25;
-    m_PlanarFactor = 0.1;
-    m_BulgeFactor = 0.1;
-    m_RepulsionFactor = 0.2;
-
-    m_Index = Index(m_RadiusOfInfluence * 1.2);
-
-    std::cout << "m_LinkRestLength = " << m_LinkRestLength << std::endl;
-    std::cout << "m_RadiusOfInfluence = " << m_RadiusOfInfluence << std::endl;
-    std::cout << "m_SpringFactor = " << m_SpringFactor << std::endl;
-    std::cout << "m_PlanarFactor = " << m_PlanarFactor << std::endl;
-    std::cout << "m_BulgeFactor = " << m_BulgeFactor << std::endl;
-    std::cout << "m_RepulsionFactor = " << m_RepulsionFactor << std::endl;
-    std::cout << std::endl;
-
-    // find unique vertices
+    // find unique vertices and create cells
     std::unordered_map<glm::vec3, int> indexes;
     std::unordered_map<glm::vec3, std::vector<int>> vertexTriangles;
     for (int i = 0; i < triangles.size(); i++) {
@@ -94,7 +74,7 @@ Model::Model(const std::vector<Triangle> &triangles) :
         }
     }
 
-    // build index
+    // build index and compute normals
     for (int i = 0; i < m_Positions.size(); i++) {
         m_Index.Add(m_Positions[i], i);
         m_Normals[i] = CellNormal(i);
@@ -168,6 +148,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
+        // m_Food[i] += N.z;
         // newFood[i] += Random(0, 1);
         // newFood[i] += Random(0, 1) / (std::abs(P.y) + 1);
         // newFood[i] += glm::length(repulsionVector);
@@ -182,7 +163,6 @@ void Model::UpdateBatch(const int wi, const int wn) {
 void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     m_NewPositions.resize(m_Positions.size());
     m_NewNormals.resize(m_Normals.size());
-    m_NewFood.resize(m_Food.size());
 
     const int wn = tp.size();
     std::vector<std::future<void>> results(wn);
