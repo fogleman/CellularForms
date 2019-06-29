@@ -5,14 +5,7 @@
 #include "model.h"
 #include "sphere.h"
 #include "stl.h"
-
-const float SplitThreshold = 2000;
-const float LinkRestLength = 1;
-const float RadiusOfInfluence = 20;
-const float RepulsionFactor = 0.2;
-const float SpringFactor = 0.8;
-const float PlanarFactor = 0.2;
-const float BulgeFactor = 0.2;
+#include "util.h"
 
 void RunForever(Model &model) {
     const auto startTime = std::chrono::steady_clock::now();
@@ -37,6 +30,28 @@ void RunForever(Model &model) {
 }
 
 int main() {
+    float SplitThreshold = 2000;
+    float LinkRestLength = 1;
+    float RadiusOfInfluence = Random(LinkRestLength, LinkRestLength * 5);
+    float RepulsionFactor = Random(0, 1);
+    float SpringFactor = Random(0, 1);
+    float PlanarFactor = Random(0, 1);
+    float BulgeFactor = Random(0, 1);
+
+    float sum = RepulsionFactor + SpringFactor + PlanarFactor + BulgeFactor;
+    RepulsionFactor /= sum;
+    SpringFactor /= sum;
+    PlanarFactor /= sum;
+    BulgeFactor /= sum;
+
+    SplitThreshold    = 2000;
+    LinkRestLength    = 1;
+    RadiusOfInfluence = 3.04226;
+    RepulsionFactor   = 0.0503518;
+    SpringFactor      = 0.337649;
+    PlanarFactor      = 0.444502;
+    BulgeFactor       = 0.167498;
+
     std::cout << "SplitThreshold    = " << SplitThreshold << std::endl;
     std::cout << "LinkRestLength    = " << LinkRestLength << std::endl;
     std::cout << "RadiusOfInfluence = " << RadiusOfInfluence << std::endl;
@@ -54,8 +69,8 @@ int main() {
         SplitThreshold, LinkRestLength, RadiusOfInfluence,
         RepulsionFactor, SpringFactor, PlanarFactor, BulgeFactor);
 
-    // RunGUI(model);
-    RunForever(model);
+    RunGUI(model);
+    // RunForever(model);
 
     return 0;
 }

@@ -113,8 +113,8 @@ void RunGUI(Model &model) {
         targetMax = glm::max(targetMax, max);
         currentMin += (targetMin - currentMin) * 0.01f;
         currentMax += (targetMax - currentMax) * 0.01f;
-        currentMin = glm::vec3(-250);
-        currentMax = glm::vec3(250);
+        // currentMin = glm::vec3(-250);
+        // currentMax = glm::vec3(250);
         const glm::vec3 size = currentMax - currentMin;
         const glm::vec3 center = (currentMin + currentMax) / 2.0f;
         const float scale = glm::compMin(glm::vec3(2) / size);
@@ -153,7 +153,7 @@ void RunGUI(Model &model) {
     while (!glfwWindowShouldClose(window)) {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 20; i++) {
             model.UpdateWithThreadPool(tp);
         }
 
