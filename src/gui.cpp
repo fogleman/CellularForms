@@ -153,7 +153,7 @@ void RunGUI(Model &model) {
     while (!glfwWindowShouldClose(window)) {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 1; i++) {
             model.UpdateWithThreadPool(tp);
         }
 
