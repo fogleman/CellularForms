@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 
 void Panic(const std::string &message);

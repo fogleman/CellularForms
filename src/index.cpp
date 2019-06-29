@@ -1,5 +1,7 @@
 #include "index.h"
 
+#include <algorithm>
+
 #include "util.h"
 
 #define DEBUG_INDEX 0

@@ -1,5 +1,7 @@
 #include "sphere.h"
 
+#include <functional>
+
 #include <glm/glm.hpp>
 
 std::vector<Triangle> IcosahedronTriangles() {

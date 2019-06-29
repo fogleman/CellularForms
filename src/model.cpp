@@ -1,5 +1,7 @@
 #include "model.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/gtx/hash.hpp>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/normal.hpp>

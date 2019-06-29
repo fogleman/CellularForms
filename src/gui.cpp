@@ -1,4 +1,5 @@
 #define GL_SILENCE_DEPRECATION
+#define GLM_ENABLE_EXPERIMENTAL
 
 #include <chrono>
 #include <GLFW/glfw3.h>

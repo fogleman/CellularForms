@@ -1,5 +1,7 @@
 #include "triangle.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/gtx/normal.hpp>
 
 #include "util.h"

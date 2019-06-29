@@ -1,6 +1,7 @@
 #include "util.h"
 
 #include <chrono>
+#include <functional>
 #include <iostream>
 #include <random>
 
