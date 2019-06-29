@@ -158,14 +158,14 @@ void Model::UpdateBatch(const int wi, const int wn) {
             m_RepulsionFactor * repulsionVector;
 
         // m_Food[i] += N.z;
-        // newFood[i] += Random(0, 1);
-        // newFood[i] += Random(0, 1) / (std::abs(P.y) + 1);
-        // newFood[i] += glm::length(repulsionVector);
-        // newFood[i] += Random(0, 1);
-        // newFood[i] = food + std::pow(std::max(0.f, N.z), 2);
-        // newFood[i] = food + N.z + 0.1;
-        // newFood[i] += std::pow(N.z, 2);
-        // newFood[i] = std::max(0.f, newFood[i]);
+        // m_Food[i] += Random(0, 1);
+        // m_Food[i] += Random(0, 1) / (std::abs(P.y) + 1);
+        // m_Food[i] += glm::length(repulsionVector);
+        // m_Food[i] += Random(0, 1);
+        // m_Food[i] = food + std::pow(std::max(0.f, N.z), 2);
+        // m_Food[i] = food + N.z + 0.1;
+        // m_Food[i] += std::pow(N.z, 2);
+        // m_Food[i] = std::max(0.f, m_Food[i]);
     }
 }
 
@@ -204,7 +204,6 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     done = Timed("commit");
     m_Positions = m_NewPositions;
     m_Normals = m_NewNormals;
-    // m_Food = newFood;
     done();
 
     // split

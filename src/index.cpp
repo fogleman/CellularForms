@@ -106,7 +106,8 @@ bool Index::Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id) {
                     continue;
                 }
                 auto &ids = m_Cells[IndexForKey(glm::ivec3(x, y, z))];
-                std::lock_guard<std::mutex> guard(m_Locks[(x + y + z) % m_Locks.size()]);
+                std::lock_guard<std::mutex> guard(
+                    m_Locks[(x + y + z) % m_Locks.size()]);
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 #if DEBUG_INDEX
                     if (it == ids.end()) {
@@ -127,7 +128,8 @@ bool Index::Update(const glm::vec3 &p0, const glm::vec3 &p1, const int id) {
                     continue;
                 }
                 auto &ids = m_Cells[IndexForKey(glm::ivec3(x, y, z))];
-                std::lock_guard<std::mutex> guard(m_Locks[(x + y + z) % m_Locks.size()]);
+                std::lock_guard<std::mutex> guard(
+                    m_Locks[(x + y + z) % m_Locks.size()]);
                 #if DEBUG_INDEX
                     const auto it = std::find(ids.begin(), ids.end(), id);
                     if (it != ids.end()) {
