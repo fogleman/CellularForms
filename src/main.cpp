@@ -46,11 +46,11 @@ int main() {
 
     SplitThreshold    = 2000;
     LinkRestLength    = 1;
-    RadiusOfInfluence = 2;
+    RadiusOfInfluence = 3;
     RepulsionFactor   = 0.05;
-    SpringFactor      = 0.34;
-    PlanarFactor      = 0.44;
-    BulgeFactor       = 0.17;
+    SpringFactor      = 0.4;
+    PlanarFactor      = 0.4;
+    BulgeFactor       = 0.2;
 
     std::cout << "SplitThreshold    = " << SplitThreshold << std::endl;
     std::cout << "LinkRestLength    = " << LinkRestLength << std::endl;
