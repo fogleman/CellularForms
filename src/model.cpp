@@ -190,6 +190,16 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     }
     done();
 
+    // compute mean position change
+    glm::vec3 sum(0);
+    for (int i = 0; i < m_Positions.size(); i++) {
+        sum += m_NewPositions[i] - m_Positions[i];
+    }
+    const glm::vec3 offset = -sum / (float)m_Positions.size();
+    for (int i = 0; i < m_Positions.size(); i++) {
+        m_NewPositions[i] += offset;
+    }
+
     done = Timed("update index");
     for (int wi = 0; wi < wn; wi++) {
         results[wi] = tp.push([this, wi, wn](int) {
