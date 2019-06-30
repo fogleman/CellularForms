@@ -67,6 +67,7 @@ Model::Model(
     }
 
     // build index and compute normals
+    Ensure();
     for (int i = 0; i < m_Positions.size(); i++) {
         m_Index.Add(m_Positions[i], i);
         m_Normals[i] = CellNormal(i);
@@ -80,6 +81,15 @@ void Model::Bounds(glm::vec3 &min, glm::vec3 &max) const {
         min = glm::min(min, p);
         max = glm::max(max, p);
     }
+}
+
+void Model::Ensure() {
+    glm::vec3 min, max;
+    Bounds(min, max);
+    const float padding = std::max(m_LinkRestLength, m_RadiusOfInfluence) * 10;
+    min -= padding;
+    max += padding;
+    m_Index.Ensure(min, max);
 }
 
 void Model::UpdateBatch(const int wi, const int wn) {
@@ -159,7 +169,9 @@ void Model::UpdateBatch(const int wi, const int wn) {
     }
 }
 
-void Model::UpdateWithThreadPool(ThreadPool &pool) {
+void Model::Update(ThreadPool &pool) {
+    Ensure();
+
     m_NewPositions.resize(m_Positions.size());
     m_NewNormals.resize(m_Normals.size());
 

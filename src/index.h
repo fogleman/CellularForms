@@ -3,14 +3,14 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
 #include <mutex>
-#include <unordered_map>
 #include <vector>
 
 class Index {
 public:
     Index(const float cellSize);
+
+    void Ensure(const glm::vec3 &min, const glm::vec3 &max);
 
     glm::ivec3 KeyForPoint(const glm::vec3 &point) const;
 

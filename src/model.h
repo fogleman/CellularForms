@@ -19,33 +19,24 @@ public:
         const float planarFactor,
         const float bulgeFactor);
 
-    const std::vector<glm::vec3> &Positions() const {
-        return m_Positions;
-    }
+    // getter methods
+    const std::vector<glm::vec3> &Positions() const { return m_Positions; }
+    const std::vector<glm::vec3> &Normals() const { return m_Normals; }
+    const std::vector<float> &Food() const { return m_Food; }
+    const std::vector<std::vector<int>> &Links() const { return m_Links; }
+    float SplitThreshold() const { return m_SplitThreshold; }
+    float LinkRestLength() const { return m_LinkRestLength; }
+    float RadiusOfInfluence() const { return m_RadiusOfInfluence; }
+    float RepulsionFactor() const { return m_RepulsionFactor; }
+    float SpringFactor() const { return m_SpringFactor; }
+    float PlanarFactor() const { return m_PlanarFactor; }
+    float BulgeFactor() const { return m_BulgeFactor; }
 
-    const std::vector<glm::vec3> &Normals() const {
-        return m_Normals;
-    }
-
-    const std::vector<std::vector<int>> &Links() const {
-        return m_Links;
-    }
-
+    // Bounds computes the min / max bounds of all cells
     void Bounds(glm::vec3 &min, glm::vec3 &max) const;
 
-    void UpdateWithThreadPool(ThreadPool &pool);
-
-    void UpdateBatch(const int wi, const int wn);
-
-    glm::vec3 CellNormal(const int index) const;
-
-    void ChangeLink(const int i, const int from, const int to);
-
-    void InsertLinkBefore(const int i, const int before, const int link);
-
-    void InsertLinkAfter(const int i, const int after, const int link);
-
-    void Split(const int i);
+    // Update runs one iteration of simulation using the provided thread pool
+    void Update(ThreadPool &pool);
 
     std::vector<Triangle> Triangulate() const;
 
@@ -54,6 +45,20 @@ public:
     void VertexAttributes(std::vector<float> &result) const;
 
 private:
+    void Ensure();
+
+    void UpdateBatch(const int wi, const int wn);
+
+    glm::vec3 CellNormal(const int index) const;
+
+    void Split(const int i);
+
+    void ChangeLink(const int i, const int from, const int to);
+
+    void InsertLinkBefore(const int i, const int before, const int link);
+
+    void InsertLinkAfter(const int i, const int after, const int link);
+
     // amount of food required for a cell to split
     float m_SplitThreshold;
 

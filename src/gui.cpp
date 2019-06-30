@@ -100,12 +100,13 @@ void RunGUI(Model &model) {
     glGenBuffers(1, &arrayBuffer);
     glGenBuffers(1, &elementBuffer);
 
-    std::vector<float> vertexAttributes;
-    std::vector<glm::uvec3> indexes;
+    const glm::vec3 minSize(
+        model.RadiusOfInfluence() * model.RepulsionFactor() * 50);
 
-    glm::vec3 currentMin, currentMax;
     glm::vec3 targetMin, targetMax;
-    model.Bounds(currentMin, currentMax);
+    model.Bounds(targetMin, targetMax);
+    glm::vec3 currentMin = targetMin;
+    glm::vec3 currentMax = targetMax;
 
     const auto getModelTransform = [&]() {
         glm::vec3 min, max;
@@ -114,8 +115,8 @@ void RunGUI(Model &model) {
         targetMax = glm::max(targetMax, max);
         currentMin += (targetMin - currentMin) * 0.01f;
         currentMax += (targetMax - currentMax) * 0.01f;
-        // currentMin = glm::vec3(-250);
-        // currentMax = glm::vec3(250);
+        currentMin = glm::min(currentMin, -minSize);
+        currentMax = glm::max(currentMax, minSize);
         const glm::vec3 size = currentMax - currentMin;
         const glm::vec3 center = (currentMin + currentMax) / 2.0f;
         const float scale = glm::compMin(glm::vec3(2) / size);
@@ -124,6 +125,9 @@ void RunGUI(Model &model) {
             glm::translate(glm::mat4(1.0f), -center);
         return modelTransform;
     };
+
+    std::vector<float> vertexAttributes;
+    std::vector<glm::uvec3> indexes;
 
     const auto updateBuffers = [&]() {
         vertexAttributes.resize(0);
@@ -147,15 +151,13 @@ void RunGUI(Model &model) {
             indexes.data(),
             GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-        // std::cout << model.Positions().size() << std::endl;
     };
 
     while (!glfwWindowShouldClose(window)) {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
         for (int i = 0; i < 1; i++) {
-            model.UpdateWithThreadPool(pool);
+            model.Update(pool);
         }
 
         updateBuffers();

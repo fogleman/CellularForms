@@ -12,7 +12,7 @@ void RunForever(Model &model) {
     ThreadPool pool;
     int iterations = 0;
     while (1) {
-        model.UpdateWithThreadPool(pool);
+        model.Update(pool);
         iterations++;
         if (iterations % 1000 == 0) {
             char filename[1024];
@@ -34,9 +34,9 @@ int main() {
     float LinkRestLength = 1;
     float RadiusOfInfluence = Random(LinkRestLength, LinkRestLength * 5);
     float RepulsionFactor = Random(0, 0.5);
-    float SpringFactor = Random(0, 0.5);
-    float PlanarFactor = Random(0, 0.5);
-    float BulgeFactor = Random(0, 0.5);
+    float SpringFactor = Random(0, 0.25);
+    float PlanarFactor = Random(0, 0.25);
+    float BulgeFactor = Random(0, 0.25);
 
     std::cout << "SplitThreshold    = " << SplitThreshold << std::endl;
     std::cout << "LinkRestLength    = " << LinkRestLength << std::endl;

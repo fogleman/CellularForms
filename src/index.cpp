@@ -6,14 +6,39 @@
 
 #define DEBUG_INDEX 0
 
-// TODO: grow-able index
 Index::Index(const float cellSize) :
     m_CellSize(cellSize),
-    m_Start(-250, -250, -250),
-    m_Size(500, 500, 500),
+    m_Start(-25, -25, -25),
+    m_Size(51, 51, 51),
     m_Cells(m_Size.x * m_Size.y * m_Size.z),
     m_Locks(1024)
 {
+}
+
+void Index::Ensure(const glm::vec3 &min, const glm::vec3 &max) {
+    const auto k0 = KeyForPoint(min);
+    const auto k1 = KeyForPoint(max);
+    if (glm::all(glm::greaterThanEqual(k0, m_Start)) &&
+        glm::all(glm::lessThan(k1, m_Start + m_Size)))
+    {
+        return;
+    }
+    // TODO: smarter padding instead of hardcoded 10
+    const glm::ivec3 newStart = glm::min(m_Start, k0 - 10);
+    const glm::ivec3 newEnd = glm::max(m_Start + m_Size - 1, k1 + 10);
+    const glm::ivec3 newSize = newEnd - newStart + 1;
+    std::vector<std::vector<int>> newCells(newSize.x * newSize.y * newSize.z);
+    for (int i = 0; i < m_Cells.size(); i++) {
+        const int x = m_Start.x + i % m_Size.x;
+        const int y = m_Start.y + (i / m_Size.x) % m_Size.y;
+        const int z = m_Start.z + i / (m_Size.x * m_Size.y);
+        const auto d = glm::ivec3(x, y, z) - newStart;
+        const int j = d.x + (d.y * newSize.x) + (d.z * newSize.x * newSize.y);
+        newCells[j] = m_Cells[i];
+    }
+    m_Start = newStart;
+    m_Size = newSize;
+    m_Cells = newCells;
 }
 
 glm::ivec3 Index::KeyForPoint(const glm::vec3 &point) const {
