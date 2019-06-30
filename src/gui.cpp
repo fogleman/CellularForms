@@ -108,7 +108,7 @@ void RunGUI(Model &model) {
     model.Bounds(targetMin, targetMax);
     glm::vec3 currentMin = targetMin;
     glm::vec3 currentMax = targetMax;
-    const glm::vec3 minSize(glm::distance(targetMin, targetMax) * 3);
+    const glm::vec3 minSize(glm::distance(targetMin, targetMax) * 5);
 
     const auto getModelTransform = [&]() {
         glm::vec3 min, max;
@@ -175,7 +175,7 @@ void RunGUI(Model &model) {
         glm::mat4 rotation = glm::rotate(
             glm::mat4(1.0f), glm::radians(angle), glm::vec3(0, 0, 1));
         glm::mat4 projection = glm::perspective(
-            glm::radians(30.f), aspect, 1.f, 1000.f);
+            glm::radians(25.f), aspect, 1.f, 1000.f);
         glm::vec3 eye(0, -5, 0);
         glm::vec3 center(0, 0, 0);
         glm::vec3 up(0, 0, 1);
