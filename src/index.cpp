@@ -23,10 +23,12 @@ void Index::Ensure(const glm::vec3 &min, const glm::vec3 &max) {
     {
         return;
     }
-    // TODO: smarter padding instead of hardcoded 10
-    const glm::ivec3 newStart = glm::min(m_Start, k0 - 10);
-    const glm::ivec3 newEnd = glm::max(m_Start + m_Size - 1, k1 + 10);
+    const glm::ivec3 padding = (k1 - k0 + 1) / 4;
+    const glm::ivec3 newStart = glm::min(m_Start, k0 - padding);
+    const glm::ivec3 newEnd = glm::max(m_Start + m_Size - 1, k1 + padding);
     const glm::ivec3 newSize = newEnd - newStart + 1;
+    // printf("  %d x %d x %d = %d\n",
+    //     newSize.x, newSize.y, newSize.z, newSize.x * newSize.y * newSize.z);
     std::vector<std::vector<int>> newCells(newSize.x * newSize.y * newSize.z);
     for (int i = 0; i < m_Cells.size(); i++) {
         const int x = m_Start.x + i % m_Size.x;

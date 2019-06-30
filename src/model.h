@@ -36,7 +36,7 @@ public:
     void Bounds(glm::vec3 &min, glm::vec3 &max) const;
 
     // Update runs one iteration of simulation using the provided thread pool
-    void Update(ThreadPool &pool);
+    void Update(ThreadPool &pool, const bool split = true);
 
     std::vector<Triangle> Triangulate() const;
 

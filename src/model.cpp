@@ -156,7 +156,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
-        // m_Food[i] += 1 / std::sqrt(std::abs(P.y) + 1);
+        // m_Food[i] += 1 / std::sqrt(std::abs(P.z) + 1);
         // m_Food[i] += N.z;
         // m_Food[i] += Random(0, 1);
         // m_Food[i] += Random(0, 1) / (std::abs(P.y) + 1);
@@ -169,7 +169,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
     }
 }
 
-void Model::Update(ThreadPool &pool) {
+void Model::Update(ThreadPool &pool, const bool split) {
     Ensure();
 
     m_NewPositions.resize(m_Positions.size());
@@ -219,14 +219,16 @@ void Model::Update(ThreadPool &pool) {
     done();
 
     // split
-    done = Timed("split");
-    for (int i = 0; i < m_Food.size(); i++) {
-        m_Food[i] += Random(0, 1);
-        if (m_Food[i] > m_SplitThreshold) {
-            Split(i);
+    if (split) {
+        done = Timed("split");
+        for (int i = 0; i < m_Food.size(); i++) {
+            m_Food[i] += Random(0, 1);
+            if (m_Food[i] > m_SplitThreshold) {
+                Split(i);
+            }
         }
+        done();
     }
-    done();
 }
 
 glm::vec3 Model::CellNormal(const int index) const {

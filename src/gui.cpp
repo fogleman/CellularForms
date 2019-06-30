@@ -67,6 +67,10 @@ void RunGUI(Model &model) {
 
     ThreadPool pool;
 
+    for (int i = 0; i < 100; i++) {
+        model.Update(pool, false);
+    }
+
     if (!glfwInit()) {
         return;
     }
@@ -100,13 +104,11 @@ void RunGUI(Model &model) {
     glGenBuffers(1, &arrayBuffer);
     glGenBuffers(1, &elementBuffer);
 
-    const glm::vec3 minSize(
-        model.RadiusOfInfluence() * model.RepulsionFactor() * 50);
-
     glm::vec3 targetMin, targetMax;
     model.Bounds(targetMin, targetMax);
     glm::vec3 currentMin = targetMin;
     glm::vec3 currentMax = targetMax;
+    const glm::vec3 minSize(glm::distance(targetMin, targetMax) * 3);
 
     const auto getModelTransform = [&]() {
         glm::vec3 min, max;
