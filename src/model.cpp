@@ -159,7 +159,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
-        m_Food[i] += 1 / std::sqrt(std::abs(P.y) + 1);
+        // m_Food[i] += 1 / std::sqrt(std::abs(P.y) + 1);
         // m_Food[i] += N.z;
         // m_Food[i] += Random(0, 1);
         // m_Food[i] += Random(0, 1) / (std::abs(P.y) + 1);
@@ -168,20 +168,20 @@ void Model::UpdateBatch(const int wi, const int wn) {
         // m_Food[i] = food + std::pow(std::max(0.f, N.z), 2);
         // m_Food[i] = food + N.z + 0.1;
         // m_Food[i] += std::pow(N.z, 2);
-        m_Food[i] = std::max(0.f, m_Food[i]);
+        // m_Food[i] = std::max(0.f, m_Food[i]);
     }
 }
 
-void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
+void Model::UpdateWithThreadPool(ThreadPool &pool) {
     m_NewPositions.resize(m_Positions.size());
     m_NewNormals.resize(m_Normals.size());
 
-    const int wn = tp.size();
+    const int wn = pool.NumThreads();
     std::vector<std::future<void>> results(wn);
 
     auto done = Timed("run workers");
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([this, wi, wn](int) {
+        results[wi] = pool.Add([this, wi, wn]() {
             UpdateBatch(wi, wn);
         });
     }
@@ -202,7 +202,7 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
 
     done = Timed("update index");
     for (int wi = 0; wi < wn; wi++) {
-        results[wi] = tp.push([this, wi, wn](int) {
+        results[wi] = pool.Add([this, wi, wn]() {
             for (int i = wi; i < m_Positions.size(); i += wn) {
                 m_Index.Update(m_Positions[i], m_NewPositions[i], i);
             }
@@ -222,7 +222,7 @@ void Model::UpdateWithThreadPool(ctpl::thread_pool &tp) {
     // split
     done = Timed("split");
     for (int i = 0; i < m_Food.size(); i++) {
-        // m_Food[i] += Random(0, 1);
+        m_Food[i] += Random(0, 1);
         if (m_Food[i] > m_SplitThreshold) {
             Split(i);
         }

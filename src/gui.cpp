@@ -10,8 +10,8 @@
 #include <iostream>
 #include <vector>
 
-#include "ctpl.h"
 #include "gui.h"
+#include "pool.h"
 #include "program.h"
 #include "stl.h"
 
@@ -65,7 +65,7 @@ void RunGUI(Model &model) {
     auto startTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed;
 
-    ctpl::thread_pool tp(4);
+    ThreadPool pool;
 
     if (!glfwInit()) {
         return;
@@ -155,7 +155,7 @@ void RunGUI(Model &model) {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
         for (int i = 0; i < 10; i++) {
-            model.UpdateWithThreadPool(tp);
+            model.UpdateWithThreadPool(pool);
         }
 
         updateBuffers();

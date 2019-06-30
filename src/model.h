@@ -3,8 +3,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-#include "ctpl.h"
 #include "index.h"
+#include "pool.h"
 #include "triangle.h"
 
 class Model {
@@ -33,7 +33,7 @@ public:
 
     void Bounds(glm::vec3 &min, glm::vec3 &max) const;
 
-    void UpdateWithThreadPool(ctpl::thread_pool &tp);
+    void UpdateWithThreadPool(ThreadPool &pool);
 
     void UpdateBatch(const int wi, const int wn);
 

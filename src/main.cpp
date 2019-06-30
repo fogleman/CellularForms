@@ -1,18 +1,18 @@
 #include <iostream>
 
-#include "ctpl.h"
 #include "gui.h"
 #include "model.h"
+#include "pool.h"
 #include "sphere.h"
 #include "stl.h"
 #include "util.h"
 
 void RunForever(Model &model) {
     const auto startTime = std::chrono::steady_clock::now();
-    ctpl::thread_pool tp(4);
+    ThreadPool pool;
     int iterations = 0;
     while (1) {
-        model.UpdateWithThreadPool(tp);
+        model.UpdateWithThreadPool(pool);
         iterations++;
         if (iterations % 1000 == 0) {
             char filename[1024];
