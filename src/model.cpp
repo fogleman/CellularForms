@@ -28,16 +28,6 @@ Model::Model(
     m_BulgeFactor(bulgeFactor),
     m_Index(radiusOfInfluence * 1.2)
 {
-    // const float averageEdgeLength = [&triangles]() {
-    //     float sum = 0;
-    //     for (const auto &t : triangles) {
-    //         sum += glm::distance(t.A(), t.B());
-    //         sum += glm::distance(t.B(), t.C());
-    //         sum += glm::distance(t.C(), t.A());
-    //     }
-    //     return sum / (triangles.size() * 3);
-    // }();
-
     // find unique vertices and create cells
     std::unordered_map<glm::vec3, int> indexes;
     std::unordered_map<glm::vec3, std::vector<int>> vertexTriangles;
@@ -107,7 +97,6 @@ void Model::UpdateBatch(const int wi, const int wn) {
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
-        // float food = 0;
         for (const int j : links) {
             const glm::vec3 &L = m_Positions[j];
             const glm::vec3 D = L - P;
@@ -120,7 +109,6 @@ void Model::UpdateBatch(const int wi, const int wn) {
                 bulgeDistance += std::sqrt(
                     link2 - glm::dot(D, D) + dot * dot) + dot;
             }
-            // food += m_Food[j];
             if (length2 < roi2) {
                 // linked cells will be repulsed in the repulsion step below
                 // so, here we add in the opposite to counteract it for
@@ -135,7 +123,6 @@ void Model::UpdateBatch(const int wi, const int wn) {
         springTarget *= m;
         planarTarget *= m;
         bulgeDistance *= m;
-        // food *= m;
 
         // repulsion
         for (const int j : m_Index.Nearby(P)) {

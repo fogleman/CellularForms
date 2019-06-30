@@ -30,7 +30,7 @@ void RunForever(Model &model) {
 }
 
 int main() {
-    float SplitThreshold = 2000;
+    float SplitThreshold = 1000;
     float LinkRestLength = 1;
     float RadiusOfInfluence = Random(LinkRestLength, LinkRestLength * 5);
     float RepulsionFactor = Random(0, 1);
@@ -44,14 +44,6 @@ int main() {
     PlanarFactor /= sum;
     BulgeFactor /= sum;
 
-    SplitThreshold    = 1000;
-    LinkRestLength    = 1;
-    RadiusOfInfluence = 1.5;
-    RepulsionFactor   = 0.2;
-    SpringFactor      = 0.4;
-    PlanarFactor      = 0.4;
-    BulgeFactor       = 0.2;
-
     std::cout << "SplitThreshold    = " << SplitThreshold << std::endl;
     std::cout << "LinkRestLength    = " << LinkRestLength << std::endl;
     std::cout << "RadiusOfInfluence = " << RadiusOfInfluence << std::endl;
@@ -62,7 +54,17 @@ int main() {
     std::cout << std::endl;
 
     const auto triangles = SphereTriangles(1);
+
     // const auto triangles = LoadBinarySTL(argv[1]);
+    // const float averageEdgeLength = [&triangles]() {
+    //     float sum = 0;
+    //     for (const auto &t : triangles) {
+    //         sum += glm::distance(t.A(), t.B());
+    //         sum += glm::distance(t.B(), t.C());
+    //         sum += glm::distance(t.C(), t.A());
+    //     }
+    //     return sum / (triangles.size() * 3);
+    // }();
 
     Model model(
         triangles,

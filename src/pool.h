@@ -3,7 +3,6 @@
 #include <condition_variable>
 #include <functional>
 #include <future>
-#include <iostream>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -14,7 +13,6 @@ public:
     ThreadPool(int numThreads = std::thread::hardware_concurrency()) :
         m_Stop(false)
     {
-        std::cout << numThreads << std::endl;
         for (int i = 0; i < numThreads; i++) {
             m_Threads.emplace_back([this]() {
                 while (1) {
