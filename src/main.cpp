@@ -33,16 +33,10 @@ int main() {
     float SplitThreshold = 1000;
     float LinkRestLength = 1;
     float RadiusOfInfluence = Random(LinkRestLength, LinkRestLength * 5);
-    float RepulsionFactor = Random(0, 1);
-    float SpringFactor = Random(0, 1);
-    float PlanarFactor = Random(0, 1);
-    float BulgeFactor = Random(0, 1);
-
-    float sum = RepulsionFactor + SpringFactor + PlanarFactor + BulgeFactor;
-    RepulsionFactor /= sum;
-    SpringFactor /= sum;
-    PlanarFactor /= sum;
-    BulgeFactor /= sum;
+    float RepulsionFactor = Random(0, 0.5);
+    float SpringFactor = Random(0, 0.5);
+    float PlanarFactor = Random(0, 0.5);
+    float BulgeFactor = Random(0, 0.5);
 
     std::cout << "SplitThreshold    = " << SplitThreshold << std::endl;
     std::cout << "LinkRestLength    = " << LinkRestLength << std::endl;
