@@ -44,10 +44,10 @@ int main() {
     PlanarFactor /= sum;
     BulgeFactor /= sum;
 
-    SplitThreshold    = 2000;
+    SplitThreshold    = 1000;
     LinkRestLength    = 1;
-    RadiusOfInfluence = 3;
-    RepulsionFactor   = 0.05;
+    RadiusOfInfluence = 1.5;
+    RepulsionFactor   = 0.2;
     SpringFactor      = 0.4;
     PlanarFactor      = 0.4;
     BulgeFactor       = 0.2;

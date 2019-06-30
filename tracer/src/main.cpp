@@ -16,8 +16,8 @@
 #include "util.h"
 #include "vec3.h"
 
-const int w = 4096/2;
-const int h = 4096/2;
+const int w = 1920*4;
+const int h = 1080*4;
 const int ns = 16;
 const int wn = 4;
 
@@ -127,8 +127,8 @@ int main(int argc, char **argv) {
     world.Add(geom);
 
     const auto light = std::make_shared<DiffuseLight>(
-        std::make_shared<SolidTexture>(Kelvin(5000) * 25));
-    const auto L = std::make_shared<Sphere>(Vec3(1, 1, 5), 1, light);
+        std::make_shared<SolidTexture>(Kelvin(5000) * 30));
+    const auto L = std::make_shared<Sphere>(Vec3(3, 4, 1), 1, light);
     world.Add(L);
     world.AddLight(L);
 
@@ -137,13 +137,13 @@ int main(int argc, char **argv) {
     // const auto floor = std::make_shared<Sphere>(Vec3(0, 0, -1000), 1000, floorMaterial);
     // world.Add(floor);
 
-    const Vec3 eye(2, 2, 1);
-    const Vec3 center(0, 0, 0);
-    const Vec3 up(0, 0, 1);
-    const real fovy = 25;
+    const Vec3 eye(2, 1, 0);
+    const Vec3 center(0, 0.035, 0);
+    const Vec3 up(0, 1, 0);
+    const real fovy = 16;
     const real aspect = real(w) / real(h);
-    const real aperture = 0.005;
-    const real focusDistance = (eye - center).Length() - 0.35;
+    const real aperture = 0.003;
+    const real focusDistance = (eye - center).Length();
     const Camera camera(eye, center, up, fovy, aspect, aperture, focusDistance);
 
     Image im(w, h);

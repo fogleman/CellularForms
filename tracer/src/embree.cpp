@@ -177,8 +177,8 @@ EmbreeSpheres::EmbreeSpheres(std::string path, const P_Material &material) :
         return a.R < b.R;
     });
 
-    const float minRadius = spheres[spheres.size() / 100 * 1].R;
-    const float maxRadius = spheres[spheres.size() / 100 * 99].R;
+    const float minRadius = spheres[spheres.size() * 1 / 1000].R;
+    const float maxRadius = spheres[spheres.size() * 999 / 1000].R;
 
     // float minRadius = spheres[0].R;
     // float maxRadius = spheres[0].R;
@@ -194,12 +194,11 @@ EmbreeSpheres::EmbreeSpheres(std::string path, const P_Material &material) :
     }
 
     // compute bounding box
-    Vec3 min = Vec3(spheres[0].X, spheres[0].Y, spheres[0].Z);
-    Vec3 max = Vec3(spheres[0].X, spheres[0].Y, spheres[0].Z);
-    for (const auto &sphere : spheres) {
-        const Vec3 v(sphere.X, sphere.Y, sphere.Z);
-        min = Min(min, v);
-        max = Max(max, v);
+    Vec3 min = points[0];
+    Vec3 max = points[0];
+    for (const auto &p : points) {
+        min = Min(min, p);
+        max = Max(max, p);
     }
 
     // transform spheres
