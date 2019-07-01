@@ -162,10 +162,6 @@ void Model::UpdateBatch(const int wi, const int wn) {
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
 
-        const float light = 1 - m_Light.Occlusion(
-            m_NewPositions[i], m_Radius[i] * 1.001f, 64);
-        m_Food[i] += light;
-
         // m_Food[i] += 1 / std::sqrt(std::abs(P.z) + 1);
         // m_Food[i] += N.z;
         // m_Food[i] += Random(0, 1);
@@ -228,14 +224,21 @@ void Model::Update(ThreadPool &pool, const bool split) {
     m_Normals = m_NewNormals;
     done();
 
-    // update light
-    if (m_Iterations % 10 == 0) {
+    if (m_Iterations % 100 == 0) {
+        // update light
         std::vector<glm::vec4> spheres;
         spheres.reserve(m_Positions.size());
         for (int i = 0; i < m_Positions.size(); i++) {
             spheres.push_back(glm::vec4(m_Positions[i], m_Radius[i]));
         }
         m_Light.UpdateSpheres(spheres);
+
+        // add food
+        for (int i = 0; i < m_Positions.size(); i++) {
+            const float light = 1 - m_Light.Occlusion(
+                m_Positions[i], m_Radius[i] * 1.001f, 64);
+            m_Food[i] += light * 100;
+        }
     }
 
     // split

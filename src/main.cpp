@@ -51,6 +51,12 @@ int main() {
     float PlanarFactor = Random(0, 0.1);
     float BulgeFactor = Random(0, 0.1);
 
+    RadiusOfInfluence = LinkRestLength * 1.5;
+    RepulsionFactor = 0.2;
+    SpringFactor = 0.6;
+    PlanarFactor = 0.2;
+    BulgeFactor = 0.2;
+
     std::cout << "SplitThreshold    = " << SplitThreshold << std::endl;
     std::cout << "LinkRestLength    = " << LinkRestLength << std::endl;
     std::cout << "RadiusOfInfluence = " << RadiusOfInfluence << std::endl;
@@ -65,8 +71,8 @@ int main() {
         SplitThreshold, LinkRestLength, RadiusOfInfluence,
         RepulsionFactor, SpringFactor, PlanarFactor, BulgeFactor);
 
-    RunGUI(model);
-    // RunForever(model);
+    // RunGUI(model);
+    RunForever(model);
 
     return 0;
 }
