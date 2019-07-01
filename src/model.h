@@ -84,6 +84,9 @@ private:
     // food level of each cell
     std::vector<float> m_Food;
 
+    // amount of food to add each iteration
+    std::vector<float> m_FoodRate;
+
     // list of indexes of linked cells
     std::vector<std::vector<int>> m_Links;
 

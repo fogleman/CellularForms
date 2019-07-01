@@ -42,6 +42,7 @@ Model::Model(
                 m_Normals.emplace_back(0);
                 m_Radius.push_back(0);
                 m_Food.push_back(0);
+                m_FoodRate.push_back(0);
                 m_Links.emplace_back();
             }
         }
@@ -237,7 +238,7 @@ void Model::Update(ThreadPool &pool, const bool split) {
         for (int i = 0; i < m_Positions.size(); i++) {
             const float light = 1 - m_Light.Occlusion(
                 m_Positions[i], m_Radius[i] * 1.001f, 64);
-            m_Food[i] += light * 100;
+            m_FoodRate[i] = light;
         }
     }
 
@@ -246,6 +247,7 @@ void Model::Update(ThreadPool &pool, const bool split) {
         done = Timed("split");
         for (int i = 0; i < m_Food.size(); i++) {
             // m_Food[i] += Random(0, 1);
+            m_Food[i] += m_FoodRate[i];
             if (m_Food[i] > m_SplitThreshold) {
                 Split(i);
             }
@@ -310,6 +312,7 @@ void Model::Split(const int parentIndex) {
     m_Normals.emplace_back(m_Normals[parentIndex]);
     m_Radius.push_back(0);
     m_Food.push_back(0);
+    m_FoodRate.push_back(0);
     m_Links.emplace_back();
 
     // choose "plane of cleavage"
