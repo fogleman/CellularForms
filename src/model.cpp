@@ -244,37 +244,41 @@ glm::vec3 Model::CellNormal(const int index) const {
     return glm::normalize(N);
 }
 
-void Model::ChangeLink(const int i, const int from, const int to) {
-    auto &links = m_Links[i];
-    const auto it = std::find(links.begin(), links.end(), from);
-    // if (it == links.end()) {
-    //     Panic("index not found in ChangeLink");
-    //     return;
-    // }
-    *it = to;
-}
-
-void Model::InsertLinkBefore(const int i, const int before, const int link) {
-    auto &links = m_Links[i];
-    const auto it = std::find(links.begin(), links.end(), before);
-    // if (it == links.end()) {
-    //     Panic("index not found in InsertLinkAfter");
-    //     return;
-    // }
-    links.insert(it, link);
-}
-
-void Model::InsertLinkAfter(const int i, const int after, const int link) {
-    auto &links = m_Links[i];
-    const auto it = std::find(links.begin(), links.end(), after);
-    // if (it == links.end()) {
-    //     Panic("index not found in InsertLinkAfter");
-    //     return;
-    // }
-    links.insert(it + 1, link);
-}
-
 void Model::Split(const int parentIndex) {
+
+    const auto changeLink = [this](
+        const int i, const int from, const int to)
+    {
+        auto &links = m_Links[i];
+        const auto it = std::find(links.begin(), links.end(), from);
+        // if (it == links.end()) {
+        //     Panic("index not found in ChangeLink");
+        // }
+        *it = to;
+    };
+
+    const auto insertLinkBefore = [this](
+        const int i, const int before, const int link)
+    {
+        auto &links = m_Links[i];
+        const auto it = std::find(links.begin(), links.end(), before);
+        // if (it == links.end()) {
+        //     Panic("index not found in InsertLinkAfter");
+        // }
+        links.insert(it, link);
+    };
+
+    const auto insertLinkAfter = [this](
+        const int i, const int after, const int link)
+    {
+        auto &links = m_Links[i];
+        const auto it = std::find(links.begin(), links.end(), after);
+        // if (it == links.end()) {
+        //     Panic("index not found in InsertLinkAfter");
+        // }
+        links.insert(it + 1, link);
+    };
+
     // create the child in the same spot as the parent for now
     const int childIndex = m_Links.size();
     m_Positions.push_back(m_Positions[parentIndex]);
@@ -304,10 +308,10 @@ void Model::Split(const int parentIndex) {
     childLinks.push_back(parentIndex);
 
     // update neighbor links
-    InsertLinkAfter(links[i0 % n], parentIndex, childIndex);
-    InsertLinkBefore(links[i1 % n], parentIndex, childIndex);
+    insertLinkAfter(links[i0 % n], parentIndex, childIndex);
+    insertLinkBefore(links[i1 % n], parentIndex, childIndex);
     for (int i = i1 + 1; i <= i0 + n - 1; i++) {
-        ChangeLink(links[i % n], parentIndex, childIndex);
+        changeLink(links[i % n], parentIndex, childIndex);
     }
 
     // compute new parent position

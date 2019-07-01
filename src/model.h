@@ -53,12 +53,6 @@ private:
 
     void Split(const int i);
 
-    void ChangeLink(const int i, const int from, const int to);
-
-    void InsertLinkBefore(const int i, const int before, const int link);
-
-    void InsertLinkAfter(const int i, const int after, const int link);
-
     // amount of food required for a cell to split
     float m_SplitThreshold;
 
