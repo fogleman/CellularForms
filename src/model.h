@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "index.h"
+#include "light.h"
 #include "pool.h"
 #include "triangle.h"
 
@@ -53,6 +54,9 @@ private:
 
     void Split(const int i);
 
+    // number of iterations run
+    size_t m_Iterations;
+
     // amount of food required for a cell to split
     float m_SplitThreshold;
 
@@ -74,6 +78,9 @@ private:
     // normal of each cell
     std::vector<glm::vec3> m_Normals;
 
+    // radius of each cell (based on distance to linked cells)
+    std::vector<float> m_Radius;
+
     // food level of each cell
     std::vector<float> m_Food;
 
@@ -82,6 +89,9 @@ private:
 
     // spatial hash index
     Index m_Index;
+
+    // ray tracing occlusion structure
+    Light m_Light;
 
     // buffers
     std::vector<glm::vec3> m_NewPositions;

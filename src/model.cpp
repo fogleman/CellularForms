@@ -40,6 +40,7 @@ Model::Model(
                 // create new cell
                 m_Positions.push_back(v);
                 m_Normals.emplace_back(0);
+                m_Radius.push_back(0);
                 m_Food.push_back(0);
                 m_Links.emplace_back();
             }
@@ -107,6 +108,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
+        float radius = 0;
         for (const int j : links) {
             const glm::vec3 &L = m_Positions[j];
             const glm::vec3 D = L - P;
@@ -119,6 +121,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
                 bulgeDistance += std::sqrt(
                     link2 - glm::dot(D, D) + dot * dot) + dot;
             }
+            radius += std::sqrt(length2);
             if (length2 < roi2) {
                 // linked cells will be repulsed in the repulsion step below
                 // so, here we add in the opposite to counteract it for
@@ -133,6 +136,9 @@ void Model::UpdateBatch(const int wi, const int wn) {
         springTarget *= m;
         planarTarget *= m;
         bulgeDistance *= m;
+        radius *= m;
+
+        m_Radius[i] = radius / 2;
 
         // repulsion
         for (const int j : m_Index.Nearby(P)) {
@@ -155,6 +161,10 @@ void Model::UpdateBatch(const int wi, const int wn) {
             m_PlanarFactor * (planarTarget - P) +
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
+
+        const float light = 1 - m_Light.Occlusion(
+            m_NewPositions[i], m_Radius[i] * 1.001f, 64);
+        m_Food[i] += light;
 
         // m_Food[i] += 1 / std::sqrt(std::abs(P.z) + 1);
         // m_Food[i] += N.z;
@@ -218,17 +228,29 @@ void Model::Update(ThreadPool &pool, const bool split) {
     m_Normals = m_NewNormals;
     done();
 
+    // update light
+    if (m_Iterations % 10 == 0) {
+        std::vector<glm::vec4> spheres;
+        spheres.reserve(m_Positions.size());
+        for (int i = 0; i < m_Positions.size(); i++) {
+            spheres.push_back(glm::vec4(m_Positions[i], m_Radius[i]));
+        }
+        m_Light.UpdateSpheres(spheres);
+    }
+
     // split
     if (split) {
         done = Timed("split");
         for (int i = 0; i < m_Food.size(); i++) {
-            m_Food[i] += Random(0, 1);
+            // m_Food[i] += Random(0, 1);
             if (m_Food[i] > m_SplitThreshold) {
                 Split(i);
             }
         }
         done();
     }
+
+    m_Iterations++;
 }
 
 glm::vec3 Model::CellNormal(const int index) const {
@@ -283,6 +305,7 @@ void Model::Split(const int parentIndex) {
     const int childIndex = m_Links.size();
     m_Positions.push_back(m_Positions[parentIndex]);
     m_Normals.emplace_back(m_Normals[parentIndex]);
+    m_Radius.push_back(0);
     m_Food.push_back(0);
     m_Links.emplace_back();
 

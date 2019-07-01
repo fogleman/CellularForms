@@ -16,7 +16,7 @@ DCOMPILE_FLAGS = -D DEBUG
 # Add additional include paths
 INCLUDES = -I $(SRC_PATH)
 # General linker settings
-LINK_FLAGS = -flto -O3 -lpthread -lglfw -framework OpenGL
+LINK_FLAGS = -flto -O3 -lpthread -lembree3 -lglfw -framework OpenGL
 # Additional release-specific linker settings
 RLINK_FLAGS = 
 # Additional debug-specific linker settings

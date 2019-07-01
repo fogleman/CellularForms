@@ -34,3 +34,15 @@ int RandomIntN(const int n) {
     std::uniform_int_distribution<int> dist(0, n - 1);
     return dist(gen);
 }
+
+glm::vec3 RandomUnitVector() {
+    while (1) {
+        const float x = Random(-1, 1);
+        const float y = Random(-1, 1);
+        const float z = Random(-1, 1);
+        if (x * x + y * y + z * z > 1) {
+            continue;
+        }
+        return glm::normalize(glm::vec3(x, y, z));
+    }
+}
