@@ -1,6 +1,6 @@
 # Cellular Forms
 
-An implementation of Andy Lomas' Cellular Forms.
+An implementation of Andy Lomas' [Cellular Forms](http://www.andylomas.com/extra/andylomas_paper_cellular_forms_aisb50.pdf).
 
 ### Dependencies
 
