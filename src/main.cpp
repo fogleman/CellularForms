@@ -30,7 +30,7 @@ void RunForever(Model &model) {
 }
 
 int main() {
-    const auto triangles = SphereTriangles(1);
+    const auto triangles = SphereTriangles(0);
     // const auto triangles = LoadBinarySTL(argv[1]);
 
     const float averageEdgeLength = [&triangles]() {
@@ -43,7 +43,7 @@ int main() {
         return sum / (triangles.size() * 3);
     }();
 
-    float SplitThreshold = 1000;
+    float SplitThreshold = 2000;
     float LinkRestLength = averageEdgeLength;
     float RadiusOfInfluence = Random(LinkRestLength, LinkRestLength * 5);
     float RepulsionFactor = Random(0, 0.1);

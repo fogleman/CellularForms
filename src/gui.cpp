@@ -21,18 +21,18 @@ const std::string VertexSource = R"(
 uniform mat4 matrix;
 
 attribute vec4 position;
-attribute vec3 normal;
-attribute float value;
+// attribute vec3 normal;
+// attribute float value;
 
 varying vec3 ec_pos;
-varying vec3 ec_normal;
-varying float ec_value;
+// varying vec3 ec_normal;
+// varying float ec_value;
 
 void main() {
     gl_Position = matrix * position;
     ec_pos = vec3(gl_Position);
-    ec_normal = normal;
-    ec_value = value;
+    // ec_normal = normal;
+    // ec_value = value;
 }
 )";
 
@@ -40,8 +40,8 @@ const std::string FragmentSource = R"(
 #version 120
 
 varying vec3 ec_pos;
-varying vec3 ec_normal;
-varying float ec_value;
+// varying vec3 ec_normal;
+// varying float ec_value;
 
 const vec3 light_direction0 = normalize(vec3(0.5, -2, 1));
 const vec3 light_direction1 = normalize(vec3(-0.5, -1, 1));
@@ -49,13 +49,13 @@ const vec3 color1 = vec3(0.59, 0.93, 0.54);
 const vec3 color0 = color1 * 0.1;//, 0.15, 0.11);
 
 void main() {
-    vec3 normal = ec_normal;
-    normal = normalize(cross(dFdx(ec_pos), dFdy(ec_pos)));
+    // vec3 normal = ec_normal;
+    vec3 normal = normalize(cross(dFdx(ec_pos), dFdy(ec_pos)));
     float diffuse0 = max(0, dot(normal, light_direction0));
     float diffuse1 = max(0, dot(normal, light_direction1));
     float diffuse = diffuse0 * 0.75 + diffuse1 * 0.25;
-    vec3 valueColor = vec3(ec_value * 0.8 + 0.2);
-    valueColor = color1;
+    // vec3 valueColor = vec3(ec_value * 0.8 + 0.2);
+    vec3 valueColor = color1;
     vec3 color = mix(color0, valueColor, diffuse);
     gl_FragColor = vec4(color, 1);
 }
@@ -95,8 +95,8 @@ void RunGUI(Model &model) {
     Program program(VertexSource, FragmentSource);
 
     const auto positionAttrib = program.GetAttribLocation("position");
-    const auto normalAttrib = program.GetAttribLocation("normal");
-    const auto valueAttrib = program.GetAttribLocation("value");
+    // const auto normalAttrib = program.GetAttribLocation("normal");
+    // const auto valueAttrib = program.GetAttribLocation("value");
     const auto matrixUniform = program.GetUniformLocation("matrix");
 
     GLuint arrayBuffer;
@@ -108,7 +108,7 @@ void RunGUI(Model &model) {
     model.Bounds(targetMin, targetMax);
     glm::vec3 currentMin = targetMin;
     glm::vec3 currentMax = targetMax;
-    const glm::vec3 minSize(glm::distance(targetMin, targetMax) * 5);
+    const glm::vec3 minSize(glm::distance(targetMin, targetMax) * 10);
 
     const auto getModelTransform = [&]() {
         glm::vec3 min, max;
@@ -129,20 +129,25 @@ void RunGUI(Model &model) {
     };
 
     std::vector<float> vertexAttributes;
+    std::vector<glm::vec3> positions;
     std::vector<glm::uvec3> indexes;
 
     const auto updateBuffers = [&]() {
-        vertexAttributes.resize(0);
-        model.VertexAttributes(vertexAttributes);
+        // vertexAttributes.resize(0);
+        // model.VertexAttributes(vertexAttributes);
 
+        // indexes.resize(0);
+        // model.TriangleIndexes(indexes);
+
+        positions.resize(0);
         indexes.resize(0);
-        model.TriangleIndexes(indexes);
+        model.BufferData(positions, indexes);
 
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
         glBufferData(
             GL_ARRAY_BUFFER,
-            vertexAttributes.size() * sizeof(vertexAttributes.front()),
-            vertexAttributes.data(),
+            positions.size() * sizeof(positions.front()),
+            positions.data(),
             GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -186,15 +191,15 @@ void RunGUI(Model &model) {
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
         glEnableVertexAttribArray(positionAttrib);
-        glEnableVertexAttribArray(normalAttrib);
-        glEnableVertexAttribArray(valueAttrib);
-        glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, false, 28, 0);
-        glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, false, 28, (void *)12);
-        glVertexAttribPointer(valueAttrib, 1, GL_FLOAT, false, 28, (void *)24);
+        // glEnableVertexAttribArray(normalAttrib);
+        // glEnableVertexAttribArray(valueAttrib);
+        glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, false, 12, 0);
+        // glVertexAttribPointer(normalAttrib, 3, GL_FLOAT, false, 28, (void *)12);
+        // glVertexAttribPointer(valueAttrib, 1, GL_FLOAT, false, 28, (void *)24);
         glDrawElements(GL_TRIANGLES, indexes.size() * 3, GL_UNSIGNED_INT, 0);
         glDisableVertexAttribArray(positionAttrib);
-        glDisableVertexAttribArray(normalAttrib);
-        glDisableVertexAttribArray(valueAttrib);
+        // glDisableVertexAttribArray(normalAttrib);
+        // glDisableVertexAttribArray(valueAttrib);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 

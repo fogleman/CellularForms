@@ -44,6 +44,10 @@ public:
 
     void VertexAttributes(std::vector<float> &result) const;
 
+    void BufferData(
+        std::vector<glm::vec3> &positions,
+        std::vector<glm::uvec3> &indexes) const;
+
 private:
     void Ensure();
 
@@ -76,6 +80,9 @@ private:
 
     // food level of each cell
     std::vector<float> m_Food;
+
+    // radius of each cell
+    std::vector<float> m_Radius;
 
     // list of indexes of linked cells
     std::vector<std::vector<int>> m_Links;

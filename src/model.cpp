@@ -8,6 +8,7 @@
 #include <iostream>
 #include <unordered_map>
 
+#include "sphere.h"
 #include "util.h"
 
 Model::Model(
@@ -41,6 +42,7 @@ Model::Model(
                 m_Positions.push_back(v);
                 m_Normals.emplace_back(0);
                 m_Food.push_back(0);
+                m_Radius.push_back(0);
                 m_Links.emplace_back();
             }
         }
@@ -107,6 +109,8 @@ void Model::UpdateBatch(const int wi, const int wn) {
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
+        float distanceSum = 0;
+        float food = 0;
         for (const int j : links) {
             const glm::vec3 &L = m_Positions[j];
             const glm::vec3 D = L - P;
@@ -126,6 +130,8 @@ void Model::UpdateBatch(const int wi, const int wn) {
                 const float m = (roi2 - length2) / roi2;
                 repulsionVector += Dn * m;
             }
+            distanceSum += std::sqrt(length2);
+            food += m_Food[j];
         }
 
         // average
@@ -133,6 +139,8 @@ void Model::UpdateBatch(const int wi, const int wn) {
         springTarget *= m;
         planarTarget *= m;
         bulgeDistance *= m;
+        food *= m;
+        m_Radius[i] = distanceSum * m;
 
         // repulsion
         for (const int j : m_Index.Nearby(P)) {
@@ -155,6 +163,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
             m_PlanarFactor * (planarTarget - P) +
             (m_BulgeFactor * bulgeDistance) * N +
             m_RepulsionFactor * repulsionVector;
+        // m_Food[i] = food;
 
         // m_Food[i] += 1 / std::sqrt(std::abs(P.z) + 1);
         // m_Food[i] += N.z;
@@ -223,6 +232,8 @@ void Model::Update(ThreadPool &pool, const bool split) {
         done = Timed("split");
         for (int i = 0; i < m_Food.size(); i++) {
             m_Food[i] += Random(0, 1);
+                // * std::pow(m_Radius[i] / m_LinkRestLength, 1.f)
+                // * std::max(std::pow(m_Normals[i].z, 2.f), 0.1f);
             if (m_Food[i] > m_SplitThreshold) {
                 Split(i);
             }
@@ -284,6 +295,7 @@ void Model::Split(const int parentIndex) {
     m_Positions.push_back(m_Positions[parentIndex]);
     m_Normals.emplace_back(m_Normals[parentIndex]);
     m_Food.push_back(0);
+    m_Radius.push_back(0);
     m_Links.emplace_back();
 
     // choose "plane of cleavage"
@@ -369,15 +381,53 @@ void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
 void Model::VertexAttributes(std::vector<float> &result) const {
     for (int i = 0; i < m_Positions.size(); i++) {
         const auto &p = m_Positions[i];
-        const auto &n = m_Normals[i];
-        const float value = m_Food[i] / m_SplitThreshold;
+        // const auto &n = m_Normals[i];
+        // const float value = m_Food[i] / m_SplitThreshold;
         // const float value = i / (float)(m_Positions.size() - 1);
         result.push_back(p.x);
         result.push_back(p.y);
         result.push_back(p.z);
-        result.push_back(n.x);
-        result.push_back(n.y);
-        result.push_back(n.z);
-        result.push_back(value);
+        // result.push_back(n.x);
+        // result.push_back(n.y);
+        // result.push_back(n.z);
+        // result.push_back(value);
     }
+}
+
+void Model::BufferData(
+    std::vector<glm::vec3> &positions,
+    std::vector<glm::uvec3> &indexes) const
+{
+    // find unique sphere vertices
+    const auto sphereTriangles = SphereTriangles(2);
+    std::unordered_map<glm::vec3, int> sphereLookup;
+    std::vector<glm::vec3> spherePositions;
+    std::vector<glm::uvec3> sphereIndexes;
+    for (int i = 0; i < sphereTriangles.size(); i++) {
+        const Triangle &t = sphereTriangles[i];
+        for (const auto &v : {t.A(), t.B(), t.C()}) {
+            if (sphereLookup.find(v) == sphereLookup.end()) {
+                sphereLookup[v] = spherePositions.size();
+                spherePositions.push_back(v);
+            }
+        }
+        sphereIndexes.emplace_back(
+            sphereLookup[t.A()],
+            sphereLookup[t.B()],
+            sphereLookup[t.C()]);
+    }
+
+    // copy sphere for each cell
+    for (int i = 0; i < m_Positions.size(); i++) {
+        const int j = positions.size();
+        for (const glm::vec3 &p : spherePositions) {
+            positions.push_back(p * m_Radius[i] + m_Positions[i]);
+        }
+        for (const glm::uvec3 &idx : sphereIndexes) {
+            indexes.push_back(idx + (unsigned int)j);
+        }
+    }
+
+    // positions = m_Positions;
+    // TriangleIndexes(indexes);
 }
