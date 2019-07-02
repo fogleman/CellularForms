@@ -93,7 +93,7 @@ EmbreeMesh::EmbreeMesh(std::string path, const P_Material &material) :
     }
 
     rtcCommitGeometry(geom);
-    unsigned int geomID = rtcAttachGeometry(m_Scene, geom);
+    rtcAttachGeometry(m_Scene, geom);
     rtcReleaseGeometry(geom);
     rtcCommitScene(m_Scene);
 }
@@ -147,7 +147,7 @@ EmbreeSpheres::EmbreeSpheres(std::string path, const P_Material &material) :
 {
     std::vector<Vec3> points = LoadBinarySTL(path);
 
-    std::unordered_map<Vec3, float> radius;
+    std::unordered_map<Vec3, std::vector<float>> linkLengths;
     for (int i = 0; i < points.size(); i += 3) {
         const auto &a = points[i+0];
         const auto &b = points[i+1];
@@ -155,12 +155,21 @@ EmbreeSpheres::EmbreeSpheres(std::string path, const P_Material &material) :
         const float ab = (a - b).Length();
         const float ac = (a - c).Length();
         const float bc = (b - c).Length();
-        const float ar = std::max(ab, ac);
-        const float br = std::max(ab, bc);
-        const float cr = std::max(ac, bc);
-        radius[a] = std::max(radius[a], ar);
-        radius[b] = std::max(radius[b], br);
-        radius[c] = std::max(radius[c], cr);
+        linkLengths[a].push_back(ab);
+        linkLengths[a].push_back(ac);
+        linkLengths[b].push_back(ab);
+        linkLengths[b].push_back(bc);
+        linkLengths[c].push_back(ac);
+        linkLengths[c].push_back(bc);
+    }
+
+    std::unordered_map<Vec3, float> radius;
+    for (const auto &it : linkLengths) {
+        const auto &p = it.first;
+        const auto &lengths = it.second;
+        const float mean = std::accumulate(
+            lengths.begin(), lengths.end(), 0.f) / lengths.size();
+        radius[p] = mean * 0.5f;
     }
 
     std::vector<Sphere> spheres;
@@ -169,7 +178,10 @@ EmbreeSpheres::EmbreeSpheres(std::string path, const P_Material &material) :
         const float x = p.X();
         const float y = p.Y();
         const float z = p.Z();
-        const float r = it.second * 0.5;
+        const float r = it.second;
+        if (x > 0) {
+            continue;
+        }
         spheres.push_back(Sphere{x, y, z, r});
     }
 
