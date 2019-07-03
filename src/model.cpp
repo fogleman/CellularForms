@@ -6,6 +6,7 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/normal.hpp>
 #include <iostream>
+#include <algorithm>
 #include <unordered_map>
 
 #include "util.h"
@@ -18,24 +19,26 @@ Model::Model(
     const float repulsionFactor,
     const float springFactor,
     const float planarFactor,
-    const float bulgeFactor) :
-    m_SplitThreshold(splitThreshold),
-    m_LinkRestLength(linkRestLength),
-    m_RadiusOfInfluence(radiusOfInfluence),
-    m_RepulsionFactor(repulsionFactor),
-    m_SpringFactor(springFactor),
-    m_PlanarFactor(planarFactor),
-    m_BulgeFactor(bulgeFactor),
-    m_Index(radiusOfInfluence * 1.2)
+    const float bulgeFactor) : m_SplitThreshold(splitThreshold),
+                               m_LinkRestLength(linkRestLength),
+                               m_RadiusOfInfluence(radiusOfInfluence),
+                               m_RepulsionFactor(repulsionFactor),
+                               m_SpringFactor(springFactor),
+                               m_PlanarFactor(planarFactor),
+                               m_BulgeFactor(bulgeFactor),
+                               m_Index(radiusOfInfluence * 1.2)
 {
     // find unique vertices and create cells
     std::unordered_map<glm::vec3, int> indexes;
     std::unordered_map<glm::vec3, std::vector<int>> vertexTriangles;
-    for (int i = 0; i < triangles.size(); i++) {
+    for (int i = 0; i < triangles.size(); i++)
+    {
         const Triangle &t = triangles[i];
-        for (const auto &v : {t.A(), t.B(), t.C()}) {
+        for (const auto &v : {t.A(), t.B(), t.C()})
+        {
             vertexTriangles[v].push_back(i);
-            if (indexes.find(v) == indexes.end()) {
+            if (indexes.find(v) == indexes.end())
+            {
                 indexes[v] = m_Positions.size();
                 // create new cell
                 m_Positions.push_back(v);
@@ -47,20 +50,25 @@ Model::Model(
     }
 
     // sort triangles into CCW order for each vertex and create links
-    for (auto &it : vertexTriangles) {
+    for (auto &it : vertexTriangles)
+    {
         const auto &point = it.first;
         auto &tris = it.second;
-        for (int i0 = 1; i0 < tris.size(); i0++) {
-            const glm::vec3 &prev = triangles[tris[i0-1]].VertexBefore(point);
-            for (int i1 = i0; i1 < tris.size(); i1++) {
-                if (triangles[tris[i1]].VertexAfter(point) == prev) {
+        for (int i0 = 1; i0 < tris.size(); i0++)
+        {
+            const glm::vec3 &prev = triangles[tris[i0 - 1]].VertexBefore(point);
+            for (int i1 = i0; i1 < tris.size(); i1++)
+            {
+                if (triangles[tris[i1]].VertexAfter(point) == prev)
+                {
                     std::swap(tris[i0], tris[i1]);
                     break;
                 }
             }
         }
         const int i = indexes[point];
-        for (const int j : tris) {
+        for (const int j : tris)
+        {
             const int k = indexes[triangles[j].VertexAfter(point)];
             m_Links[i].push_back(k);
         }
@@ -68,22 +76,26 @@ Model::Model(
 
     // build index and compute normals
     Ensure();
-    for (int i = 0; i < m_Positions.size(); i++) {
+    for (int i = 0; i < m_Positions.size(); i++)
+    {
         m_Index.Add(m_Positions[i], i);
         m_Normals[i] = CellNormal(i);
     }
 }
 
-void Model::Bounds(glm::vec3 &min, glm::vec3 &max) const {
+void Model::Bounds(glm::vec3 &min, glm::vec3 &max) const
+{
     min = m_Positions[0];
     max = m_Positions[0];
-    for (const auto &p : m_Positions) {
+    for (const auto &p : m_Positions)
+    {
         min = glm::min(min, p);
         max = glm::max(max, p);
     }
 }
 
-void Model::Ensure() {
+void Model::Ensure()
+{
     glm::vec3 min, max;
     Bounds(min, max);
     const float padding = std::max(m_LinkRestLength, m_RadiusOfInfluence) * 10;
@@ -92,11 +104,13 @@ void Model::Ensure() {
     m_Index.Ensure(min, max);
 }
 
-void Model::UpdateBatch(const int wi, const int wn) {
+void Model::UpdateBatch(const int wi, const int wn)
+{
     const float roi2 = m_RadiusOfInfluence * m_RadiusOfInfluence;
     const float link2 = m_LinkRestLength * m_LinkRestLength;
 
-    for (int i = wi; i < m_Positions.size(); i += wn) {
+    for (int i = wi; i < m_Positions.size(); i += wn)
+    {
         // get cell position, normal, and links
         const glm::vec3 P = m_Positions[i];
         const glm::vec3 N = CellNormal(i);
@@ -107,19 +121,23 @@ void Model::UpdateBatch(const int wi, const int wn) {
         glm::vec3 springTarget(0);
         glm::vec3 planarTarget(0);
         float bulgeDistance = 0;
-        for (const int j : links) {
+        for (const int j : links)
+        {
             const glm::vec3 &L = m_Positions[j];
             const glm::vec3 D = L - P;
             const glm::vec3 Dn = glm::normalize(D);
             springTarget += L - Dn * m_LinkRestLength;
             planarTarget += L;
             const float length2 = glm::length2(D);
-            if (length2 < link2) {
+            if (length2 < link2)
+            {
                 const float dot = glm::dot(D, N);
                 bulgeDistance += std::sqrt(
-                    link2 - glm::dot(D, D) + dot * dot) + dot;
+                                     link2 - glm::dot(D, D) + dot * dot) +
+                                 dot;
             }
-            if (length2 < roi2) {
+            if (length2 < roi2)
+            {
                 // linked cells will be repulsed in the repulsion step below
                 // so, here we add in the opposite to counteract it for
                 // performance reasons
@@ -135,14 +153,17 @@ void Model::UpdateBatch(const int wi, const int wn) {
         bulgeDistance *= m;
 
         // repulsion
-        for (const int j : m_Index.Nearby(P)) {
-            if (j == i) {
+        for (const int j : m_Index.Nearby(P))
+        {
+            if (j == i)
+            {
                 continue;
             }
             const glm::vec3 &L = m_Positions[j];
             const glm::vec3 D = P - L;
             const float d2 = glm::length2(D);
-            if (d2 < roi2) {
+            if (d2 < roi2)
+            {
                 const float m = (roi2 - d2) / roi2;
                 repulsionVector += glm::normalize(D) * m;
             }
@@ -151,10 +172,10 @@ void Model::UpdateBatch(const int wi, const int wn) {
         // results
         m_NewNormals[i] = N;
         m_NewPositions[i] = P +
-            m_SpringFactor * (springTarget - P) +
-            m_PlanarFactor * (planarTarget - P) +
-            (m_BulgeFactor * bulgeDistance) * N +
-            m_RepulsionFactor * repulsionVector;
+                            m_SpringFactor * (springTarget - P) +
+                            m_PlanarFactor * (planarTarget - P) +
+                            (m_BulgeFactor * bulgeDistance) * N +
+                            m_RepulsionFactor * repulsionVector;
 
         // m_Food[i] += 1 / std::sqrt(std::abs(P.z) + 1);
         // m_Food[i] += N.z;
@@ -169,7 +190,8 @@ void Model::UpdateBatch(const int wi, const int wn) {
     }
 }
 
-void Model::Update(ThreadPool &pool, const bool split) {
+void Model::Update(ThreadPool &pool, const bool split)
+{
     Ensure();
 
     m_NewPositions.resize(m_Positions.size());
@@ -179,35 +201,42 @@ void Model::Update(ThreadPool &pool, const bool split) {
     std::vector<std::future<void>> results(wn);
 
     auto done = Timed("run workers");
-    for (int wi = 0; wi < wn; wi++) {
+    for (int wi = 0; wi < wn; wi++)
+    {
         results[wi] = pool.Add([this, wi, wn]() {
             UpdateBatch(wi, wn);
         });
     }
-    for (int wi = 0; wi < wn; wi++) {
+    for (int wi = 0; wi < wn; wi++)
+    {
         results[wi].get();
     }
     done();
 
     // compute mean position change
     glm::vec3 sum(0);
-    for (int i = 0; i < m_Positions.size(); i++) {
+    for (int i = 0; i < m_Positions.size(); i++)
+    {
         sum += m_NewPositions[i] - m_Positions[i];
     }
     const glm::vec3 offset = -sum / (float)m_Positions.size();
-    for (int i = 0; i < m_Positions.size(); i++) {
+    for (int i = 0; i < m_Positions.size(); i++)
+    {
         m_NewPositions[i] += offset;
     }
 
     done = Timed("update index");
-    for (int wi = 0; wi < wn; wi++) {
+    for (int wi = 0; wi < wn; wi++)
+    {
         results[wi] = pool.Add([this, wi, wn]() {
-            for (int i = wi; i < m_Positions.size(); i += wn) {
+            for (int i = wi; i < m_Positions.size(); i += wn)
+            {
                 m_Index.Update(m_Positions[i], m_NewPositions[i], i);
             }
         });
     }
-    for (int wi = 0; wi < wn; wi++) {
+    for (int wi = 0; wi < wn; wi++)
+    {
         results[wi].get();
     }
     done();
@@ -219,11 +248,14 @@ void Model::Update(ThreadPool &pool, const bool split) {
     done();
 
     // split
-    if (split) {
+    if (split)
+    {
         done = Timed("split");
-        for (int i = 0; i < m_Food.size(); i++) {
+        for (int i = 0; i < m_Food.size(); i++)
+        {
             m_Food[i] += Random(0, 1);
-            if (m_Food[i] > m_SplitThreshold) {
+            if (m_Food[i] > m_SplitThreshold)
+            {
                 Split(i);
             }
         }
@@ -231,12 +263,14 @@ void Model::Update(ThreadPool &pool, const bool split) {
     }
 }
 
-glm::vec3 Model::CellNormal(const int index) const {
+glm::vec3 Model::CellNormal(const int index) const
+{
     const auto &links = m_Links[index];
     const glm::vec3 p0 = m_Positions[index];
     glm::vec3 p1 = m_Positions[links.back()];
     glm::vec3 N(0);
-    for (const int i : links) {
+    for (const int i : links)
+    {
         const glm::vec3 p2 = m_Positions[i];
         N += glm::triangleNormal(p0, p1, p2);
         p1 = p2;
@@ -244,11 +278,11 @@ glm::vec3 Model::CellNormal(const int index) const {
     return glm::normalize(N);
 }
 
-void Model::Split(const int parentIndex) {
+void Model::Split(const int parentIndex)
+{
 
     const auto changeLink = [this](
-        const int i, const int from, const int to)
-    {
+                                const int i, const int from, const int to) {
         auto &links = m_Links[i];
         const auto it = std::find(links.begin(), links.end(), from);
         // if (it == links.end()) {
@@ -258,8 +292,7 @@ void Model::Split(const int parentIndex) {
     };
 
     const auto insertLinkBefore = [this](
-        const int i, const int before, const int link)
-    {
+                                      const int i, const int before, const int link) {
         auto &links = m_Links[i];
         const auto it = std::find(links.begin(), links.end(), before);
         // if (it == links.end()) {
@@ -269,8 +302,7 @@ void Model::Split(const int parentIndex) {
     };
 
     const auto insertLinkAfter = [this](
-        const int i, const int after, const int link)
-    {
+                                     const int i, const int after, const int link) {
         auto &links = m_Links[i];
         const auto it = std::find(links.begin(), links.end(), after);
         // if (it == links.end()) {
@@ -289,34 +321,22 @@ void Model::Split(const int parentIndex) {
     // choose "plane of cleavage"
     const auto links = m_Links[parentIndex];
     const int n = links.size();
-    const int i0 = [&]() {
-        float bestDistance = 1e9;
-        int bestIndex = 0;
-        for (int i = 0; i < n; i++) {
-            const int j = (i + n / 2) % n;
-            const auto p0 = m_Positions[links[i]];
-            const auto p1 = m_Positions[links[j]];
-            const float d = glm::distance(p0, p1);
-            if (d < bestDistance) {
-                bestDistance = d;
-                bestIndex = i;
-            }
-        }
-        return bestIndex;
-    }();
+    const int i0 = RandomIntN(n);
     const int i1 = i0 + n / 2;
 
     // update parent links
     auto &parentLinks = m_Links[parentIndex];
     parentLinks.resize(0);
-    for (int i = i0; i <= i1; i++) {
+    for (int i = i0; i <= i1; i++)
+    {
         parentLinks.push_back(links[i % n]);
     }
     parentLinks.push_back(childIndex);
 
     // update child links
     auto &childLinks = m_Links[childIndex];
-    for (int i = i1; i <= i0 + n; i++) {
+    for (int i = i1; i <= i0 + n; i++)
+    {
         childLinks.push_back(links[i % n]);
     }
     childLinks.push_back(parentIndex);
@@ -324,20 +344,23 @@ void Model::Split(const int parentIndex) {
     // update neighbor links
     insertLinkAfter(links[i0 % n], parentIndex, childIndex);
     insertLinkBefore(links[i1 % n], parentIndex, childIndex);
-    for (int i = i1 + 1; i <= i0 + n - 1; i++) {
+    for (int i = i1 + 1; i <= i0 + n - 1; i++)
+    {
         changeLink(links[i % n], parentIndex, childIndex);
     }
 
     // compute new parent position
     glm::vec3 newParentPosition(m_Positions[parentIndex]);
-    for (const int j : parentLinks) {
+    for (const int j : parentLinks)
+    {
         newParentPosition += m_Positions[j];
     }
     newParentPosition /= parentLinks.size() + 1;
 
     // compute new child position
     glm::vec3 newChildPosition(m_Positions[childIndex]);
-    for (const int j : childLinks) {
+    for (const int j : childLinks)
+    {
         newChildPosition += m_Positions[j];
     }
     newChildPosition /= childLinks.size() + 1;
@@ -354,34 +377,42 @@ void Model::Split(const int parentIndex) {
     m_Food[parentIndex] = 0;
 }
 
-std::vector<Triangle> Model::Triangulate() const {
+std::vector<Triangle> Model::Triangulate() const
+{
     std::vector<glm::uvec3> indexes;
     TriangleIndexes(indexes);
     std::vector<Triangle> triangles;
     triangles.reserve(indexes.size());
-    for (const auto &i : indexes) {
+    for (const auto &i : indexes)
+    {
         triangles.emplace_back(
             m_Positions[i.x], m_Positions[i.y], m_Positions[i.z]);
     }
     return triangles;
 }
 
-void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
-    for (int i = 0; i < m_Positions.size(); i++) {
+void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const
+{
+    for (int i = 0; i < m_Positions.size(); i++)
+    {
         const auto &links = m_Links[i];
-        for (int j = 0; j < links.size(); j++) {
+        for (int j = 0; j < links.size(); j++)
+        {
             const int k = (j + 1) % links.size();
             const int link0 = links[j];
             const int link1 = links[k];
-            if (i < link0 && i < link1) {
+            if (i < link0 && i < link1)
+            {
                 result.emplace_back(i, link0, link1);
             }
         }
     }
 }
 
-void Model::VertexAttributes(std::vector<float> &result) const {
-    for (int i = 0; i < m_Positions.size(); i++) {
+void Model::VertexAttributes(std::vector<float> &result) const
+{
+    for (int i = 0; i < m_Positions.size(); i++)
+    {
         const auto &p = m_Positions[i];
         const auto &n = m_Normals[i];
         const float value = m_Food[i] / m_SplitThreshold;

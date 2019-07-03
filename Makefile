@@ -1,3 +1,12 @@
+LINK_FLAGS :=
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	LINK_FLAGS = -flto -O3 -lpthread -lGL -lGLU -lglfw -lX11 -lXxf86vm -lXrandr -lpthread -lXi
+endif
+ifeq ($(UNAME_S),Darwin)
+	LINK_FLAGS = -flto -O3 -lpthread -lglfw -framework OpenGL
+endif
+
 #### PROJECT SETTINGS ####
 # The name of the executable to be created
 BIN_NAME := main
@@ -15,12 +24,10 @@ RCOMPILE_FLAGS = -D NDEBUG
 DCOMPILE_FLAGS = -D DEBUG
 # Add additional include paths
 INCLUDES = -I $(SRC_PATH)
-# General linker settings
-LINK_FLAGS = -flto -O3 -lpthread -lglfw -framework OpenGL
 # Additional release-specific linker settings
-RLINK_FLAGS = 
+RLINK_FLAGS =
 # Additional debug-specific linker settings
-DLINK_FLAGS = 
+DLINK_FLAGS =
 # Destination directory, like a jail or mounted system
 DESTDIR = /
 # Install path (bin/ is appended automatically)
@@ -43,7 +50,7 @@ INSTALL_DATA = $(INSTALL) -m 644
 export V := false
 export CMD_PREFIX := @
 ifeq ($(V),true)
-	CMD_PREFIX := 
+	CMD_PREFIX :=
 endif
 
 # Combine compiler and linker flags
@@ -82,7 +89,7 @@ START_TIME = date '+%s' > $(TIME_FILE)
 END_TIME = read st < $(TIME_FILE) ; \
 	$(RM) $(TIME_FILE) ; \
 	st=$$((`date '+%s'` - $$st - 86400)) ; \
-	echo `date -u -d @$$st '+%H:%M:%S'` 
+	echo `date -u -d @$$st '+%H:%M:%S'`
 
 # Version macros
 # Comment/remove this section to remove versioning

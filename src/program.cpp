@@ -1,18 +1,27 @@
+#define GL_GLEXT_PROTOTYPES
 #include "program.h"
 
 #include <exception>
+#include <stdexcept>
 #include <vector>
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtx/component_wise.hpp>
+#include <glm/gtx/string_cast.hpp>
 
-namespace {
+namespace
+{
 
-GLuint compileShader(GLenum shaderType, std::string shaderSource) {
+GLuint compileShader(GLenum shaderType, std::string shaderSource)
+{
     const GLuint shader = glCreateShader(shaderType);
     const GLchar *source = shaderSource.c_str();
     glShaderSource(shader, 1, &source, 0);
     glCompileShader(shader);
     GLint isCompiled;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-    if(!isCompiled) {
+    if (!isCompiled)
+    {
         GLint maxLength;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
         std::vector<GLchar> infoLog(maxLength);
@@ -23,7 +32,8 @@ GLuint compileShader(GLenum shaderType, std::string shaderSource) {
     return shader;
 }
 
-GLuint compileProgram(std::string vertexSource, std::string fragmentSource) {
+GLuint compileProgram(std::string vertexSource, std::string fragmentSource)
+{
     const GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource);
     const GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
     const GLuint program = glCreateProgram();
@@ -32,7 +42,8 @@ GLuint compileProgram(std::string vertexSource, std::string fragmentSource) {
     glLinkProgram(program);
     GLint isLinked;
     glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
-    if (!isLinked) {
+    if (!isLinked)
+    {
         GLint maxLength;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
         std::vector<GLchar> infoLog(maxLength);
@@ -49,20 +60,23 @@ GLuint compileProgram(std::string vertexSource, std::string fragmentSource) {
     return program;
 }
 
+} // namespace
+
+Program::Program(std::string vertexSource, std::string fragmentSource) : m_Program(compileProgram(vertexSource, fragmentSource))
+{
 }
 
-Program::Program(std::string vertexSource, std::string fragmentSource) :
-    m_Program(compileProgram(vertexSource, fragmentSource))
-{}
-
-void Program::Use() const {
+void Program::Use() const
+{
     glUseProgram(m_Program);
 }
 
-GLint Program::GetUniformLocation(std::string name) const {
+GLint Program::GetUniformLocation(std::string name) const
+{
     return glGetUniformLocation(m_Program, name.c_str());
 }
 
-GLint Program::GetAttribLocation(std::string name) const {
+GLint Program::GetAttribLocation(std::string name) const
+{
     return glGetAttribLocation(m_Program, name.c_str());
 }
