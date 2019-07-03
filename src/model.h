@@ -38,6 +38,12 @@ public:
     // Update runs one iteration of simulation using the provided thread pool
     void Update(ThreadPool &pool, const bool split = true);
 
+    void Split(const int i);
+
+    void Merge(const int mergeIndex, const int removeIndex);
+
+    void Remove(const int removeIndex);
+
     std::vector<Triangle> Triangulate() const;
 
     void TriangleIndexes(std::vector<glm::uvec3> &result) const;
@@ -53,11 +59,11 @@ private:
 
     void ChangeLink(const int i, const int from, const int to);
 
+    void RemoveLink(const int i, const int link);
+
     void InsertLinkBefore(const int i, const int before, const int link);
 
     void InsertLinkAfter(const int i, const int after, const int link);
-
-    void Split(const int i);
 
     // amount of food required for a cell to split
     float m_SplitThreshold;

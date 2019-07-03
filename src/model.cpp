@@ -166,7 +166,7 @@ void Model::UpdateBatch(const int wi, const int wn) {
             m_RepulsionFactor * repulsionVector;
 
         // m_Food[i] += 1 / std::sqrt(std::abs(P.z) + 1);
-        // m_Food[i] += N.z;
+        m_Food[i] += N.z;
         // m_Food[i] += Random(0, 1);
         // m_Food[i] += Random(0, 1) / (std::abs(P.y) + 1);
         // m_Food[i] += glm::length(repulsionVector);
@@ -244,9 +244,15 @@ void Model::Update(ThreadPool &pool, const bool split) {
     if (split) {
         done = Timed("split");
         for (int i = 0; i < m_Food.size(); i++) {
-            m_Food[i] += Random(0, 1);
+            if (!m_Alive[i]) {
+                continue;
+            }
+            // m_Food[i] += Random(0, 1);
             if (m_Food[i] > m_SplitThreshold) {
                 Split(i);
+            }
+            if (m_Food[i] < -m_SplitThreshold * 5) {
+                Remove(i);
             }
         }
         done();
@@ -263,6 +269,10 @@ glm::vec3 Model::CellNormal(const int index) const {
         N += glm::triangleNormal(p0, p1, p2);
         p1 = p2;
     }
+    if (N == glm::vec3(0)) {
+        // TODO: fix this
+        return N;
+    }
     return glm::normalize(N);
 }
 
@@ -273,6 +283,15 @@ void Model::ChangeLink(const int i, const int from, const int to) {
     //     Panic("index not found in ChangeLink");
     // }
     *it = to;
+};
+
+void Model::RemoveLink(const int i, const int link) {
+    auto &links = m_Links[i];
+    const auto it = std::find(links.begin(), links.end(), link);
+    // if (it == links.end()) {
+    //     Panic("index not found in RemoveLink");
+    // }
+    links.erase(it);
 };
 
 void Model::InsertLinkBefore(const int i, const int before, const int link) {
@@ -306,7 +325,7 @@ void Model::Split(const int parentIndex) {
     const auto links = m_Links[parentIndex];
     const int n = links.size();
     const int i0 = [&]() {
-        float bestDistance = 1e9;
+        float bestDistance = std::numeric_limits<float>::max();
         int bestIndex = 0;
         for (int i = 0; i < n; i++) {
             const int j = (i + n / 2) % n;
@@ -368,6 +387,99 @@ void Model::Split(const int parentIndex) {
 
     // reset parent's food level
     m_Food[parentIndex] = 0;
+}
+
+void Model::Merge(const int mergeIndex, const int removeIndex) {
+    auto &mergeLinks = m_Links[mergeIndex];
+    auto &removeLinks = m_Links[removeIndex];
+
+    // find starting indexes
+    const int n0 = mergeLinks.size();
+    const int n1 = removeLinks.size();
+    const int i0 = std::distance(
+        mergeLinks.begin(),
+        std::find(mergeLinks.begin(), mergeLinks.end(), removeIndex));
+    const int i1 = std::distance(
+        removeLinks.begin(),
+        std::find(removeLinks.begin(), removeLinks.end(), mergeIndex));
+
+    // update links
+    std::vector<int> newLinks;
+    // copy all links except removeIndex
+    for (int i = 0; i < n0 - 1; i++) {
+        const int j = (i0 + 1 + i) % n0;
+        newLinks.push_back(mergeLinks[j]);
+    }
+    // copy all links except mergeIndex and shared links
+    for (int i = 0; i < n1 - 3; i++) {
+        const int j = (i1 + 2 + i) % n1;
+        newLinks.push_back(removeLinks[j]);
+        ChangeLink(removeLinks[j], removeIndex, mergeIndex);
+    }
+    RemoveLink(removeLinks[(i1 - 1 + n1) % n1], removeIndex);
+    RemoveLink(removeLinks[(i1 + 1 + n1) % n1], removeIndex);
+    mergeLinks = newLinks;
+    // for (const int j : newLinks) {
+    //     printf("%d, ", j);
+    // }
+    // printf("\n");
+
+    // compute new parent position
+    const glm::vec3 newMergePosition = (
+        m_Positions[mergeIndex] + m_Positions[removeIndex]) / 2.f;
+
+    // compute new position
+    // glm::vec3 newMergePosition(m_Positions[mergeIndex]);
+    // for (const int j : mergeLinks) {
+    //     newMergePosition += m_Positions[j];
+    // }
+    // newMergePosition /= mergeLinks.size() + 1;
+
+    // update positions, normals, and index
+    m_Index.Update(m_Positions[mergeIndex], newMergePosition, mergeIndex);
+    m_Index.Remove(m_Positions[removeIndex], removeIndex);
+    m_Positions[mergeIndex] = newMergePosition;
+    m_Normals[mergeIndex] = CellNormal(mergeIndex);
+
+    // kill cell
+    m_Positions[removeIndex] = glm::vec3(0);
+    m_Normals[removeIndex] = glm::vec3(0);
+    m_Food[removeIndex] = 0;
+    m_Alive[removeIndex] = false;
+    m_Links[removeIndex].resize(0);
+}
+
+void Model::Remove(const int removeIndex) {
+    // choose edge to collapse
+    // const int mergeIndex = [&]() {
+    //     float bestDistance = std::numeric_limits<float>::max();
+    //     int bestIndex = 0;
+    //     for (const int j : m_Links[removeIndex]) {
+    //         const float d = glm::distance(
+    //             m_Positions[removeIndex], m_Positions[j]);
+    //         if (d < bestDistance) {
+    //             bestDistance = d;
+    //             bestIndex = j;
+    //         }
+    //     }
+    //     return bestIndex;
+    // }();
+
+    const int mergeIndex = [&]() {
+        int bestCount = std::numeric_limits<int>::max();
+        int bestIndex = 0;
+        for (const int j : m_Links[removeIndex]) {
+            const int d = m_Links[j].size();
+            if (d < bestCount) {
+                bestCount = d;
+                bestIndex = j;
+            }
+        }
+        return bestIndex;
+    }();
+
+    // merge cells into one
+    Merge(mergeIndex, removeIndex);
 }
 
 std::vector<Triangle> Model::Triangulate() const {
