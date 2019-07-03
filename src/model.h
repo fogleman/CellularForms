@@ -51,6 +51,12 @@ private:
 
     glm::vec3 CellNormal(const int index) const;
 
+    void ChangeLink(const int i, const int from, const int to);
+
+    void InsertLinkBefore(const int i, const int before, const int link);
+
+    void InsertLinkAfter(const int i, const int after, const int link);
+
     void Split(const int i);
 
     // amount of food required for a cell to split
@@ -76,6 +82,9 @@ private:
 
     // food level of each cell
     std::vector<float> m_Food;
+
+    // alive / dead status of each cell
+    std::vector<bool> m_Alive;
 
     // list of indexes of linked cells
     std::vector<std::vector<int>> m_Links;

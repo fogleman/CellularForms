@@ -6,6 +6,7 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/normal.hpp>
 #include <iostream>
+#include <limits>
 #include <unordered_map>
 
 #include "util.h"
@@ -41,6 +42,7 @@ Model::Model(
                 m_Positions.push_back(v);
                 m_Normals.emplace_back(0);
                 m_Food.push_back(0);
+                m_Alive.push_back(true);
                 m_Links.emplace_back();
             }
         }
@@ -75,11 +77,14 @@ Model::Model(
 }
 
 void Model::Bounds(glm::vec3 &min, glm::vec3 &max) const {
-    min = m_Positions[0];
-    max = m_Positions[0];
-    for (const auto &p : m_Positions) {
-        min = glm::min(min, p);
-        max = glm::max(max, p);
+    min = glm::vec3(std::numeric_limits<float>::max());
+    max = glm::vec3(std::numeric_limits<float>::min());
+    for (int i = 0; i < m_Positions.size(); i++) {
+        if (!m_Alive[i]) {
+            continue;
+        }
+        min = glm::min(min, m_Positions[i]);
+        max = glm::max(max, m_Positions[i]);
     }
 }
 
@@ -97,6 +102,10 @@ void Model::UpdateBatch(const int wi, const int wn) {
     const float link2 = m_LinkRestLength * m_LinkRestLength;
 
     for (int i = wi; i < m_Positions.size(); i += wn) {
+        if (!m_Alive[i]) {
+            continue;
+        }
+
         // get cell position, normal, and links
         const glm::vec3 P = m_Positions[i];
         const glm::vec3 N = CellNormal(i);
@@ -190,19 +199,32 @@ void Model::Update(ThreadPool &pool, const bool split) {
     done();
 
     // compute mean position change
-    glm::vec3 sum(0);
-    for (int i = 0; i < m_Positions.size(); i++) {
-        sum += m_NewPositions[i] - m_Positions[i];
-    }
-    const glm::vec3 offset = -sum / (float)m_Positions.size();
-    for (int i = 0; i < m_Positions.size(); i++) {
-        m_NewPositions[i] += offset;
+    {
+        glm::vec3 sum(0);
+        int count = 0;
+        for (int i = 0; i < m_Positions.size(); i++) {
+            if (!m_Alive[i]) {
+                continue;
+            }
+            sum += m_NewPositions[i] - m_Positions[i];
+            count++;
+        }
+        const glm::vec3 offset = -sum / (float)count;
+        for (int i = 0; i < m_Positions.size(); i++) {
+            if (!m_Alive[i]) {
+                continue;
+            }
+            m_NewPositions[i] += offset;
+        }
     }
 
     done = Timed("update index");
     for (int wi = 0; wi < wn; wi++) {
         results[wi] = pool.Add([this, wi, wn]() {
             for (int i = wi; i < m_Positions.size(); i += wn) {
+                if (!m_Alive[i]) {
+                    continue;
+                }
                 m_Index.Update(m_Positions[i], m_NewPositions[i], i);
             }
         });
@@ -244,46 +266,40 @@ glm::vec3 Model::CellNormal(const int index) const {
     return glm::normalize(N);
 }
 
+void Model::ChangeLink(const int i, const int from, const int to) {
+    auto &links = m_Links[i];
+    const auto it = std::find(links.begin(), links.end(), from);
+    // if (it == links.end()) {
+    //     Panic("index not found in ChangeLink");
+    // }
+    *it = to;
+};
+
+void Model::InsertLinkBefore(const int i, const int before, const int link) {
+    auto &links = m_Links[i];
+    const auto it = std::find(links.begin(), links.end(), before);
+    // if (it == links.end()) {
+    //     Panic("index not found in InsertLinkAfter");
+    // }
+    links.insert(it, link);
+};
+
+void Model::InsertLinkAfter(const int i, const int after, const int link) {
+    auto &links = m_Links[i];
+    const auto it = std::find(links.begin(), links.end(), after);
+    // if (it == links.end()) {
+    //     Panic("index not found in InsertLinkAfter");
+    // }
+    links.insert(it + 1, link);
+};
+
 void Model::Split(const int parentIndex) {
-
-    const auto changeLink = [this](
-        const int i, const int from, const int to)
-    {
-        auto &links = m_Links[i];
-        const auto it = std::find(links.begin(), links.end(), from);
-        // if (it == links.end()) {
-        //     Panic("index not found in ChangeLink");
-        // }
-        *it = to;
-    };
-
-    const auto insertLinkBefore = [this](
-        const int i, const int before, const int link)
-    {
-        auto &links = m_Links[i];
-        const auto it = std::find(links.begin(), links.end(), before);
-        // if (it == links.end()) {
-        //     Panic("index not found in InsertLinkAfter");
-        // }
-        links.insert(it, link);
-    };
-
-    const auto insertLinkAfter = [this](
-        const int i, const int after, const int link)
-    {
-        auto &links = m_Links[i];
-        const auto it = std::find(links.begin(), links.end(), after);
-        // if (it == links.end()) {
-        //     Panic("index not found in InsertLinkAfter");
-        // }
-        links.insert(it + 1, link);
-    };
-
     // create the child in the same spot as the parent for now
     const int childIndex = m_Links.size();
     m_Positions.push_back(m_Positions[parentIndex]);
     m_Normals.emplace_back(m_Normals[parentIndex]);
     m_Food.push_back(0);
+    m_Alive.push_back(true);
     m_Links.emplace_back();
 
     // choose "plane of cleavage"
@@ -322,10 +338,10 @@ void Model::Split(const int parentIndex) {
     childLinks.push_back(parentIndex);
 
     // update neighbor links
-    insertLinkAfter(links[i0 % n], parentIndex, childIndex);
-    insertLinkBefore(links[i1 % n], parentIndex, childIndex);
+    InsertLinkAfter(links[i0 % n], parentIndex, childIndex);
+    InsertLinkBefore(links[i1 % n], parentIndex, childIndex);
     for (int i = i1 + 1; i <= i0 + n - 1; i++) {
-        changeLink(links[i % n], parentIndex, childIndex);
+        ChangeLink(links[i % n], parentIndex, childIndex);
     }
 
     // compute new parent position
@@ -368,6 +384,9 @@ std::vector<Triangle> Model::Triangulate() const {
 
 void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
     for (int i = 0; i < m_Positions.size(); i++) {
+        if (!m_Alive[i]) {
+            continue;
+        }
         const auto &links = m_Links[i];
         for (int j = 0; j < links.size(); j++) {
             const int k = (j + 1) % links.size();
@@ -381,6 +400,7 @@ void Model::TriangleIndexes(std::vector<glm::uvec3> &result) const {
 }
 
 void Model::VertexAttributes(std::vector<float> &result) const {
+    // TODO: collapse dead cells?
     for (int i = 0; i < m_Positions.size(); i++) {
         const auto &p = m_Positions[i];
         const auto &n = m_Normals[i];
