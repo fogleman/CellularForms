@@ -62,20 +62,17 @@ void main() {
 }
 )";
 
-void RunGUI(Model &model)
-{
+void RunGUI(Model &model) {
     auto startTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed;
 
     ThreadPool pool;
 
-    for (int i = 0; i < 100; i++)
-    {
+    for (int i = 0; i < 100; i++) {
         model.Update(pool, false);
     }
 
-    if (!glfwInit())
-    {
+    if (!glfwInit()) {
         return;
     }
 
@@ -84,8 +81,7 @@ void RunGUI(Model &model)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     GLFWwindow *window = glfwCreateWindow(
         1600, 1200, "Cellular Forms", NULL, NULL);
-    if (!window)
-    {
+    if (!window) {
         glfwTerminate();
         return;
     }
@@ -95,7 +91,7 @@ void RunGUI(Model &model)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glClearColor((float)0x2a / 255, (float)0x2c / 255, (float)0x2b / 255, 1);
+    glClearColor((float)0x2a/255, (float)0x2c/255, (float)0x2b/255, 1);
 
     Program program(VertexSource, FragmentSource);
 
@@ -160,12 +156,10 @@ void RunGUI(Model &model)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     };
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
-        for (int i = 0; i < 1; i++)
-        {
+        for (int i = 0; i < 1; i++) {
             model.Update(pool);
         }
 
@@ -178,7 +172,7 @@ void RunGUI(Model &model)
         int w, h;
         glfwGetWindowSize(window, &w, &h);
         const float aspect = (float)w / (float)h;
-        const float angle = 0; //elapsed.count() * 3;
+        const float angle = 0;//elapsed.count() * 3;
         glm::mat4 rotation = glm::rotate(
             glm::mat4(1.0f), glm::radians(angle), glm::vec3(0, 0, 1));
         glm::mat4 projection = glm::perspective(
