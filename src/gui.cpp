@@ -16,6 +16,8 @@
 #include "program.h"
 #include "stl.h"
 
+const int ITERATIONS_PER_FRAME = 10;
+
 const std::string VertexSource = R"(
 #version 120
 
@@ -159,7 +161,7 @@ void RunGUI(Model &model) {
     while (!glfwWindowShouldClose(window)) {
         elapsed = std::chrono::steady_clock::now() - startTime;
 
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < ITERATIONS_PER_FRAME; i++) {
             model.Update(pool);
         }
 

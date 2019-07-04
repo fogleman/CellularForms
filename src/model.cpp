@@ -290,7 +290,21 @@ void Model::Split(const int parentIndex) {
     // choose "plane of cleavage"
     const auto links = m_Links[parentIndex];
     const int n = links.size();
-    const int i0 = RandomIntN(n);
+    const int i0 = [&]() {
+        float bestDistance = 1e9;
+        int bestIndex = 0;
+        for (int i = 0; i < n; i++) {
+            const int j = (i + n / 2) % n;
+            const auto p0 = m_Positions[links[i]];
+            const auto p1 = m_Positions[links[j]];
+            const float d = glm::distance(p0, p1);
+            if (d < bestDistance) {
+                bestDistance = d;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
+    }();
     const int i1 = i0 + n / 2;
 
     // update parent links
