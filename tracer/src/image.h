@@ -17,6 +17,22 @@ public:
         return m_Height;
     }
 
+    Vec3 Min() const {
+        Vec3 min = m_Data[0];
+        for (const auto &c : m_Data) {
+            min = ::Min(min, c);
+        }
+        return min;
+    }
+
+    Vec3 Max() const {
+        Vec3 max = m_Data[0];
+        for (const auto &c : m_Data) {
+            max = ::Max(max, c);
+        }
+        return max;
+    }
+
     const Vec3 &Get(int x, int y) const {
         return m_Data[y * m_Width + x];
     }
@@ -31,6 +47,8 @@ public:
     }
 
     void SavePPM(const std::string &path, const real divider = 1) const;
+
+    void SaveDepthPPM(const std::string &path, const real divider, const real min, const real max) const;
 
 private:
     int m_Width;

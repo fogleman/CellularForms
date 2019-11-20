@@ -34,10 +34,10 @@ EmbreeMesh::EmbreeMesh(std::string path, const P_Material &material) :
     // transform points
     const Vec3 size = max - min;
     const Vec3 center = min + size / 2;
-    const real scale = 1 / size.Z();//MaxComponent();
+    const real scale = 1 / size.MaxComponent();
     for (int i = 0; i < points.size(); i++) {
         points[i] = (points[i] - center) * scale;
-        points[i] = Vec3(points[i].X(), points[i].Z(), -points[i].Y());
+        // points[i] = Vec3(points[i].X(), points[i].Y(), points[i].Z());
     }
 
     const int numTriangles = points.size() / 3;
@@ -180,7 +180,7 @@ EmbreeSpheres::EmbreeSpheres(std::string path, const P_Material &material) :
         const float z = p.Z();
         const float r = it.second;
         if (x > 0) {
-            continue;
+            // continue;
         }
         spheres.push_back(Sphere{x, y, z, r});
     }
